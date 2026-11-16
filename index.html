@@ -45,13 +45,14 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
 .ctl input[type=search]{width:190px}
 .urg{background:var(--redbg);border:1px solid var(--red);border-radius:12px;padding:10px 14px}
 .urg b{color:var(--red)}
-.item{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:8px}
-.item .m{display:flex;flex-wrap:wrap;gap:10px;align-items:center;color:var(--mu);font-size:14px}
-.item h3{margin:0;font-size:19px;line-height:1.3}.item h3 a{color:#1d4ed8}
-.item p{margin:0;color:#3D3D3A}
+.item{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.item .m{display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--mu);font-size:13px}
+.item h3{margin:0;font-size:15.5px;line-height:1.3}.item h3 a{color:#1d4ed8}
+.item p{margin:0;color:#3D3D3A;font-size:14px;line-height:1.45}
+.more{align-self:center;min-height:44px;padding:0 24px;border-radius:999px;border:1px solid var(--line);background:#fff;font-weight:700;color:var(--tx)}
 .pill{background:var(--redbg);color:var(--red);font-weight:700;border-radius:999px;padding:2px 10px}
 .acts{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
-.star{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid #BDBAAE;background:#fff;color:var(--tx)}
+.star{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;font-size:14px;border-radius:999px;border:1px solid #BDBAAE;background:#fff;color:var(--tx)}
 .star.on{border-color:var(--clay);background:#FBEDE6;color:#8A3A1D;font-weight:700}
 .tag{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:none;color:var(--mu);font-size:14px}
 .orig{font-size:14px;color:var(--ac)}
@@ -127,7 +128,7 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
 </main>
 </div>
 <script>
-var news=[],meta=null,sites=[],topics={};
+var news=[],meta=null,sites=[],topics={},expanded=false,LIMIT=5;
 try{topics=JSON.parse(localStorage.getItem('topics')||'{}')}catch(e){}
 var $=function(i){return document.getElementById(i)};
 function h(t,a,k){var e=document.createElement(t);for(var x in(a||{}))e[x]=a[x];(k||[]).forEach(function(c){if(c!=null)e.append(c)});return e}
@@ -167,7 +168,9 @@ function renderFeed(){
  var rows=news.filter(function(n){return(!s||n.site==s)&&(!t||n.tag==t)&&(!p||n.topic==p)&&(!q||(n.title+' '+n.summary+' '+n.site).toLowerCase().includes(q))});
  var u=news.filter(function(n){return n.urgent&&Date.now()-Date.parse(n.published||n.found)<3*864e5}).slice(0,5);
  $('urg').replaceChildren.apply($('urg'),u.length?[h('div',{className:'urg'},[h('b',{textContent:'Спешно: '})].concat(u.map(function(n,i){return h('span',{},[i?' · ':'',h('a',{href:safe(n.url),target:'_blank',rel:'noopener',textContent:n.site+': '+n.title})])})))]:[]);
- $('list').replaceChildren.apply($('list'),rows.length?rows.slice(0,300).map(function(n){return card(n,false)}):[h('div',{className:'item empty',textContent:news.length?'Няма резултати.':'Още няма данни. Пуснете агента от Actions.'})])}
+ var shown=expanded?rows.slice(0,300):rows.slice(0,LIMIT),kids=shown.map(function(n){return card(n,false)});
+ if(rows.length>LIMIT){var mb=h('button',{type:'button',className:'more',textContent:expanded?'Покажи по-малко':'Покажи още ('+(Math.min(rows.length,300)-LIMIT)+')'});mb.onclick=function(){expanded=!expanded;renderFeed()};kids.push(mb)}
+ $('list').replaceChildren.apply($('list'),rows.length?kids:[h('div',{className:'item empty',textContent:news.length?'Няма резултати.':'Още няма данни. Пуснете агента от Actions.'})])}
 
 function renderTopics(){
  var arr=Object.keys(topics).map(function(k){return topics[k]}).sort(function(a,b){return skey(b)<skey(a)?-1:1});
@@ -200,7 +203,7 @@ Promise.all([getJSON('news.json').catch(function(){return[]}),getJSON('meta.json
  news=r[0].filter(function(n){return !(Date.parse(n.published||n.found)<lim)}).sort(function(a,b){return skey(b)<skey(a)?-1:1});
  meta=r[1];sites=r[2];
  fill('fs',news.map(function(n){return n.site}));fill('ft',news.map(function(n){return n.tag}));fill('fp',news.map(function(n){return n.topic}));
- ['q','fs','ft','fp'].forEach(function(i){$(i).oninput=renderFeed});
+ ['q','fs','ft','fp'].forEach(function(i){$(i).oninput=function(){expanded=false;renderFeed()}});
  renderMeta();renderSources();renderAll();
 });
 </script>

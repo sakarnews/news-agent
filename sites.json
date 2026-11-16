@@ -1,7 +1,12 @@
 [
  {
   "name": "Община Харманли",
-  "url": "https://www.harmanli.bg/bg/"
+  "url": "https://www.harmanli.bg/bg/",
+  "urls": [
+   "https://www.harmanli.bg/bg/novini-i-sabitiya",
+   "https://www.harmanli.bg/bg/targove-i-konkursi",
+   "https://www.harmanli.bg/bg/materiali-za-sesii"
+  ]
  },
  {
   "name": "Община Ивайловград",
