@@ -14,7 +14,13 @@
  },
  {
   "name": "Община Симеоновград",
-  "url": "https://www.simeonovgrad.bg/begin"
+  "url": "https://www.simeonovgrad.bg/",
+  "urls": [
+   "https://www.simeonovgrad.bg/",
+   "https://www.simeonovgrad.bg/article/id_main/113/type_id/5",
+   "https://www.simeonovgrad.bg/article/id_main/92/type_id/5",
+   "https://www.simeonovgrad.bg/article/id_main/26/type_id/5"
+  ]
  },
  {
   "name": "РИОСВ Хасково",

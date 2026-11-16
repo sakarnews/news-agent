@@ -15,8 +15,8 @@ from bs4 import BeautifulSoup
 HERE = os.path.dirname(os.path.abspath(__file__))
 SITES, SEEN, NEWS, META = (os.path.join(HERE, f) for f in ("sites.json", "seen.json", "news.json", "meta.json"))
 MODEL = "claude-haiku-5-5"
-MAX_NEW = 12      # нови връзки на сайт за един пуск
-BACKFILL = 20     # при първо виждане на сайт: толкова най-нови се проверяват
+MAX_NEW = 30      # нови връзки на сайт за един пуск
+BACKFILL = 80     # при първо виждане на сайт: толкова най-нови се проверяват
 MAX_NEWS, MAX_SEEN = 1500, 3000
 MAX_AGE_DAYS = 14  # по-стари материали не се показват
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; RegionalNewsWatcher/2.0)", "Accept-Language": "bg-BG,bg;q=0.9,en;q=0.8"}
@@ -340,7 +340,7 @@ def run(sites):
             print("Не е време за обхождане (10:00 или 18:00) или вече е направено. Край.")
             return
         state["_slot"] = slot
-    backfill = not state.get("_v4")
+    backfill = not state.get("_v5")
     if backfill:
         news = []  # преизграждане с новия начин за определяне на датата
     have = {n["url"] for n in news}
@@ -390,7 +390,7 @@ def run(sites):
             except Exception as e:
                 print(f"[{name}] неуспех за {item['url']}: {e}")
         state[name] = seen[-MAX_SEEN:]
-    state["_v4"] = True
+    state["_v5"] = True
     save(SEEN, state)
     news = [n for n in news if age_days(n.get("published"), n.get("found")) <= MAX_AGE_DAYS]
     save(NEWS, news[-MAX_NEWS:])
