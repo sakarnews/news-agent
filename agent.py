@@ -140,10 +140,11 @@ def article_text(url):
 
 def analyze(client, site, title, text):
     msg = client.messages.create(
-        model=MODEL, max_tokens=500, system=SYSTEM,
+        model=MODEL, max_tokens=1500, system=SYSTEM,
         messages=[{"role": "user", "content":
                    f"Сайт: {site}\nЗаглавие: {title}\nТекст: {text or '(само заглавие)'}"}])
-    raw = re.sub(r"^```(?:json)?|```$", "", msg.content[0].text.strip(), flags=re.M).strip()
+    answer = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
+    raw = re.sub(r"^```(?:json)?|```$", "", answer.strip(), flags=re.M).strip()
     d = {"relevant": True, "tag": "новина", "summary": title, "topic": "", "urgent": False, "published": None}
     try:
         d.update(json.loads(raw))
@@ -162,6 +163,15 @@ def telegram(rec):
     requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
                   json={"chat_id": chat, "text": text, "parse_mode": "HTML",
                         "disable_web_page_preview": True}, timeout=20).raise_for_status()
+
+
+def is_recent(published):
+    """Спешно съобщение се праща в Telegram само ако не е по-старо от 3 дни."""
+    try:
+        d = datetime.strptime(published, "%Y-%m-%d").date()
+        return (datetime.now(timezone.utc).date() - d).days <= 3
+    except Exception:
+        return True
 
 
 def load(path, default):
@@ -225,7 +235,7 @@ def run(sites):
                        "found": datetime.now(timezone.utc).isoformat(timespec="seconds")}
                 news.append(rec)
                 have.add(rec["url"])
-                if rec["urgent"] and not first:
+                if rec["urgent"] and not first and is_recent(rec["published"]):
                     telegram(rec)
             except Exception as e:
                 print(f"[{name}] неуспех за {item['url']}: {e}")
