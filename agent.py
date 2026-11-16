@@ -19,9 +19,7 @@ MAX_NEW = 12      # нови връзки на сайт за един пуск
 BACKFILL = 20     # при първо виждане на сайт: толкова най-нови се проверяват
 MAX_NEWS, MAX_SEEN = 1500, 3000
 MAX_AGE_DAYS = 14  # по-стари материали не се показват
-HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-           "Accept-Language": "bg-BG,bg;q=0.9,en;q=0.8"}
+HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; RegionalNewsWatcher/2.0)", "Accept-Language": "bg-BG,bg;q=0.9,en;q=0.8"}
 MONTHS = {"януари": 1, "февруари": 2, "март": 3, "април": 4, "май": 5, "юни": 6, "юли": 7,
           "август": 8, "септември": 9, "октомври": 10, "ноември": 11, "декември": 12}
 SECTION = re.compile(r"новини|обяви|съобщения|търгове|конкурси|заповед|решения|прессъобщения|актуално|събития", re.I)
@@ -343,10 +341,10 @@ def run(sites):
         seen = state.get(name, [])
         first = backfill or name not in state
         if first:
-            batch = items[:BACKFILL]
-            seen = list(dict.fromkeys(seen + [i["url"] for i in items[BACKFILL:]]))
+            batch = items[:site.get("backfill", BACKFILL)]
+            seen = list(dict.fromkeys(seen + [i["url"] for i in items[site.get("backfill", BACKFILL):]]))
         else:
-            batch = [i for i in items if i["url"] not in set(seen)][:MAX_NEW]
+            batch = [i for i in items if i["url"] not in set(seen)][:site.get("max_new", MAX_NEW)]
         print(f"[{name}] за обработка: {len(batch)}")
         for item in reversed(batch):
             if item["url"] in have:
