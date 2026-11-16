@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Новини Югоизток</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mu:#667085;--bd:#e3e6ea;--ac:#1d4ed8;--red:#b42318;--redbg:#fef3f2}
+@media(prefers-color-scheme:dark){:root{--bg:#14171b;--card:#1d2127;--tx:#e8eaed;--mu:#9aa3ad;--bd:#2d333b;--ac:#7aa2ff;--red:#ff8a80;--redbg:#3a1d1b}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:1.3rem;margin:0 0 12px}.cnt{color:var(--mu);font-size:.9rem;font-weight:400}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.bar input,.bar select{padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);font:inherit}
+.bar input[type=search]{flex:1;min-width:160px}
+.urg{background:var(--redbg);border:1px solid var(--red);border-radius:10px;padding:10px 12px;margin-bottom:14px}
+.urg b{color:var(--red)}.urg a{color:var(--tx)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.meta{color:var(--mu);font-size:.82rem;margin-bottom:4px}
+.card h2{font-size:1.02rem;margin:0 0 4px}.card h2 a{color:var(--ac);text-decoration:none}
+.card p{margin:0 0 8px}
+button{border:1px solid var(--bd);background:none;color:var(--mu);border-radius:999px;padding:2px 10px;font:inherit;font-size:.82rem;cursor:pointer;margin-right:6px}
+button.on{color:var(--ac);border-color:var(--ac)}
+</style>
+</head>
+<body>
+<main>
+<h1>Новини Югоизток <span class="cnt" id="cnt"></span></h1>
+<div class="bar">
+<input type="search" id="q" placeholder="Търсене...">
+<select id="site"><option value="">Всички сайтове</option></select>
+<select id="tag"><option value="">Всички типове</option></select>
+<select id="topic"><option value="">Всички теми</option></select>
+<label><input type="checkbox" id="sv"> Само запазени</label>
+</div>
+<div id="urg"></div>
+<div id="list">Зареждане...</div>
+</main>
+<script>
+var news=[],saved=new Set();
+try{saved=new Set(JSON.parse(localStorage.getItem('saved')||'[]'))}catch(e){}
+var $=function(i){return document.getElementById(i)};
+function h(t,a,k){var e=document.createElement(t);for(var x in(a||{}))e[x]=a[x];(k||[]).forEach(function(c){e.append(c)});return e}
+function key(n){return (n.published||n.found.slice(0,10))+n.found}
+function safe(u){return /^https?:\/\//.test(u)?u:'#'}
+function fill(id,vals){Array.from(new Set(vals)).filter(Boolean).sort().forEach(function(v){$(id).append(h('option',{value:v,textContent:v}))})}
+function fmt(n){var d=n.published||n.found.slice(0,10);return d.split('-').reverse().join('.')}
+function render(){
+ var q=$('q').value.toLowerCase(),s=$('site').value,t=$('tag').value,tp=$('topic').value,sv=$('sv').checked;
+ var rows=news.filter(function(n){return(!s||n.site==s)&&(!t||n.tag==t)&&(!tp||n.topic==tp)&&(!sv||saved.has(n.url))&&
+  (!q||(n.title+' '+n.summary+' '+n.site).toLowerCase().includes(q))});
+ $('cnt').textContent=rows.length+' от '+news.length;
+ var u=news.filter(function(n){return n.urgent&&Date.now()-Date.parse(n.found)<48*36e5}).slice(0,5);
+ $('urg').replaceChildren.apply($('urg'),u.length?[h('div',{className:'urg'},[h('b',{textContent:'Спешно: '})].concat(
+  u.map(function(n,i){return h('span',{},[i?' · ':'',h('a',{href:safe(n.url),target:'_blank',rel:'noopener',textContent:n.site+': '+n.title})])})))]:[]);
+ $('list').replaceChildren.apply($('list'),rows.length?rows.slice(0,300).map(card):[h('p',{textContent:'Няма резултати.'})])}
+function card(n){
+ var star=h('button',{textContent:saved.has(n.url)?'★ запазено':'☆ запази',className:saved.has(n.url)?'on':''});
+ star.onclick=function(){saved.has(n.url)?saved.delete(n.url):saved.add(n.url);
+  try{localStorage.setItem('saved',JSON.stringify(Array.from(saved)))}catch(e){}render()};
+ var kids=[star];
+ if(n.topic){var b=h('button',{textContent:'# '+n.topic});b.onclick=function(){$('topic').value=n.topic;render()};kids.push(b)}
+ return h('div',{className:'card'},[
+  h('div',{className:'meta',textContent:(n.urgent?'🚨 ':'')+n.site+' · '+n.tag+' · '+fmt(n)}),
+  h('h2',{},[h('a',{href:safe(n.url),target:'_blank',rel:'noopener',textContent:n.title})]),
+  h('p',{textContent:n.summary}),h('div',{},kids)])}
+fetch('news.json?'+Date.now()).then(function(r){return r.json()}).then(function(d){
+ news=d.sort(function(a,b){return key(b)<key(a)?-1:1});
+ fill('site',news.map(function(n){return n.site}));fill('tag',news.map(function(n){return n.tag}));
+ fill('topic',news.map(function(n){return n.topic}));
+ ['q','site','tag','topic','sv'].forEach(function(i){$(i).oninput=render});render()
+}).catch(function(){$('list').textContent='Още няма данни. Пуснете агента от Actions.'});
+</script>
+</body>
+</html>
