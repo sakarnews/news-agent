@@ -1,15 +1,77 @@
-  {"name": "Община Маджарово", "url": "https://www.madzharovo.bg/new/main.php"}
-  {"name": "Община Харманли", "url": "https://www.harmanli.bg/bg/"},
-  {"name": "Община Ивайловград", "url": "https://ivaylovgrad.bg/"},
-  {"name": "Община Симеоновград", "url": "https://www.simeonovgrad.bg/"},
-  {"name": "РИОСВ Хасково", "url": "https://riosv-haskovo.bg/"},
-  {"name": "ОДМВР Хасково", "url": "https://www.mvr.bg/haskovo"},
-  {"name": "Община Свиленград", "url": "https://www.svilengrad.bg/"},
-  {"name": "Окръжен съд Хасково", "url": "https://haskovo-os.justice.bg/bg/news1"},
-  {"name": "Агенция Митници", "url": "https://customs.bg/wps/portal/agency/home"},
-  {"name": "Община Тополовград", "url": "https://topolovgrad.bg/"},
-  {"name": "Община Димитровград", "url": "https://www.dimitrovgrad.bg/bg/"},
-  {"name": "Община Любимец", "url": "https://www.lyubimets.org/"},
-  {"name": "Община Стамболово", "url": "https://www.stambolovo.bg/"},
-  {"name": "Община Минерални бани", "url": "https://www.mineralnibani.bg/"}
-  {"name": "Община Гълъбово", "url": "https://galabovo.bg/"}
+[
+ {
+  "name": "Община Харманли",
+  "url": "https://www.harmanli.bg/bg/"
+ },
+ {
+  "name": "Община Ивайловград",
+  "url": "https://ivaylovgrad.bg/"
+ },
+ {
+  "name": "Община Симеоновград",
+  "url": "https://www.simeonovgrad.bg/begin"
+ },
+ {
+  "name": "РИОСВ Хасково",
+  "url": "https://riosv-haskovo.bg/",
+  "follow_titles": [
+   "Постъпили сигнали",
+   "Писма по чл",
+   "Обявления за инвестиционни",
+   "Съобщения за отговор",
+   "Съобщения за издадени решения",
+   "Решения за преценяване",
+   "Оповестяване на искане"
+  ]
+ },
+ {
+  "name": "МВР Хасково",
+  "urls": [
+   "https://www.mvr.bg/haskovo",
+   "https://www.mvr.bg/haskovo/%D0%B8%D0%BD%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%86%D0%B8%D0%BE%D0%BD%D0%B5%D0%BD-%D1%86%D0%B5%D0%BD%D1%82%D1%8A%D1%80/%D0%BF%D1%80%D0%B5%D1%81%D1%86%D0%B5%D0%BD%D1%82%D1%8A%D1%80/%D0%B8%D0%BD%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%86%D0%B8%D0%BE%D0%BD%D0%B5%D0%BD-%D0%B1%D1%8E%D0%BB%D0%B5%D1%82%D0%B8%D0%BD"
+  ],
+  "url": "https://www.mvr.bg/haskovo"
+ },
+ {
+  "name": "Община Свиленград",
+  "url": "https://www.svilengrad.bg/"
+ },
+ {
+  "name": "Окръжен съд Хасково",
+  "url": "https://haskovo-os.justice.bg/bg/news1"
+ },
+ {
+  "name": "Окръжен съд: публични продажби",
+  "url": "https://haskovo-os.justice.bg/bg/4477",
+  "rule": "Само публични продажби на имоти или вещи, които се намират в Хасковска област (общините Хасково, Димитровград, Харманли, Свиленград, Любимец, Симеоновград, Минерални бани, Стамболово, Маджарово, Тополовград, Ивайловград). Продажби в други области не са подходящи."
+ },
+ {
+  "name": "Агенция Митници",
+  "url": "https://customs.bg/wps/portal/agency/home",
+  "keywords": [
+   "Капитан Андреево",
+   "Лесово"
+  ],
+  "rule": "Само новини и съобщения за ГКПП Капитан Андреево или ГКПП Лесово."
+ },
+ {
+  "name": "Община Тополовград",
+  "url": "https://topolovgrad.bg/"
+ },
+ {
+  "name": "Община Димитровград",
+  "url": "https://www.dimitrovgrad.bg/bg/"
+ },
+ {
+  "name": "Община Любимец",
+  "url": "https://www.lyubimets.org/"
+ },
+ {
+  "name": "Община Стамболово",
+  "url": "https://www.stambolovo.bg/"
+ },
+ {
+  "name": "Община Минерални бани",
+  "url": "https://www.mineralnibani.bg/"
+ }
+]
