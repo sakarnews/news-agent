@@ -3,73 +3,206 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Новини Югоизток</title>
+<title>Редакционен панел · Сакарнюз</title>
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mu:#667085;--bd:#e3e6ea;--ac:#1d4ed8;--red:#b42318;--redbg:#fef3f2}
-@media(prefers-color-scheme:dark){:root{--bg:#14171b;--card:#1d2127;--tx:#e8eaed;--mu:#9aa3ad;--bd:#2d333b;--ac:#7aa2ff;--red:#ff8a80;--redbg:#3a1d1b}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,sans-serif}
-main{max-width:860px;margin:0 auto;padding:16px}
-h1{font-size:1.3rem;margin:0 0 12px}.cnt{color:var(--mu);font-size:.9rem;font-weight:400}
-.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-.bar input,.bar select{padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);font:inherit}
-.bar input[type=search]{flex:1;min-width:160px}
-.urg{background:var(--redbg);border:1px solid var(--red);border-radius:10px;padding:10px 12px;margin-bottom:14px}
-.urg b{color:var(--red)}.urg a{color:var(--tx)}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:10px}
-.meta{color:var(--mu);font-size:.82rem;margin-bottom:4px}
-.card h2{font-size:1.02rem;margin:0 0 4px}.card h2 a{color:var(--ac);text-decoration:none}
-.card p{margin:0 0 8px}
-button{border:1px solid var(--bd);background:none;color:var(--mu);border-radius:999px;padding:2px 10px;font:inherit;font-size:.82rem;cursor:pointer;margin-right:6px}
-button.on{color:var(--ac);border-color:var(--ac)}
+:root{--cream:#FAF9F5;--side:#F0EEE6;--line:#E3E0D3;--tx:#141413;--mu:#5E5D59;--ac:#B4502D;--clay:#D97757;--red:#B42318;--redbg:#FEF3F2;--green:#2F7D4F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:inherit;text-decoration:none}a:hover{color:var(--ac)}
+button,input,select{font:inherit}button{cursor:pointer}
+h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
+.app{display:flex;min-height:100vh}
+.side{width:272px;flex:none;background:var(--side);border-right:1px solid var(--line);padding:28px 18px;display:flex;flex-direction:column;gap:28px}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{width:60px;height:60px;flex:none;background:#fff;border:1px solid var(--line);border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.logo img{width:52px;height:52px;object-fit:contain}
+.brand b{display:block;font-size:17px;line-height:1.25}.brand span{color:var(--mu);font-size:14px}
+.nav{display:flex;flex-direction:column;gap:6px}
+.nav button{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;border-radius:12px;border:1px solid transparent;background:none;text-align:left;color:var(--tx)}
+.nav button.on{background:#fff;border-color:var(--line);font-weight:700}
+.nav button span.n{margin-left:auto;color:var(--mu);font-size:14px;font-weight:400}
+.nav svg{flex:none}
+.main{flex:1;min-width:0;padding:40px 48px;display:flex;flex-direction:column;gap:28px;background:#7aa000 url(bg.jpg) center/cover fixed no-repeat}
+.card{background:#fff;border:1px solid var(--line);border-radius:20px}
+.hero{padding:36px;display:flex;flex-wrap:wrap;gap:32px;align-items:stretch}
+.hero .l{flex:1 1 480px;display:flex;flex-direction:column;gap:16px}
+.hero .by{display:flex;align-items:center;gap:12px;color:var(--mu);font-size:15px}
+.hero h1{font-size:40px;line-height:1.15}
+.hero p{margin:0;color:#3D3D3A;font-size:17px;max-width:640px}
+.crawl{flex:0 1 300px;background:var(--cream);border:1px solid var(--line);border-radius:18px;padding:24px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+.crawl .t{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:15px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--green);display:inline-block}
+.crawl .v{font-size:28px;font-weight:700;line-height:1.2}.crawl .s{color:var(--mu);font-size:15px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}
+.tile{padding:24px;border-radius:18px;background:#fff;border:1px solid var(--line)}
+.tile .a{color:var(--mu);font-size:15px}.tile .b{font-size:52px;font-weight:700;line-height:1.15}.tile .c{color:var(--mu);font-size:14px}
+.cols{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.feed{flex:2 1 560px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 16px}
+.bar h2{font-size:24px}
+.ctl{display:flex;gap:10px;flex-wrap:wrap}
+.ctl input,.ctl select{min-height:44px;padding:0 12px;border:1px solid #D3D0C4;border-radius:12px;background:#fff;color:var(--tx)}
+.ctl input[type=search]{width:190px}
+.urg{background:var(--redbg);border:1px solid var(--red);border-radius:12px;padding:10px 14px}
+.urg b{color:var(--red)}
+.item{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:8px}
+.item .m{display:flex;flex-wrap:wrap;gap:10px;align-items:center;color:var(--mu);font-size:14px}
+.item h3{margin:0;font-size:19px;line-height:1.3}.item h3 a{color:#1d4ed8}
+.item p{margin:0;color:#3D3D3A}
+.pill{background:var(--redbg);color:var(--red);font-weight:700;border-radius:999px;padding:2px 10px}
+.acts{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.star{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid #BDBAAE;background:#fff;color:var(--tx)}
+.star.on{border-color:var(--clay);background:#FBEDE6;color:#8A3A1D;font-weight:700}
+.tag{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:none;color:var(--mu);font-size:14px}
+.orig{font-size:14px;color:var(--ac)}
+.side2{flex:1 1 320px;min-width:0;padding:24px;display:flex;flex-direction:column;gap:14px}
+.side2 h2{font-size:24px}.side2 p{margin:0;color:var(--mu);font-size:15px}
+.mini{border-top:1px solid var(--line);padding-top:14px}.mini small{display:block;color:var(--mu);font-size:14px}.mini a{font-weight:700}
+.team{padding:20px 24px;display:flex;flex-wrap:wrap;align-items:center;gap:20px 32px}
+.team h2{font-size:22px}.team small{color:var(--mu);font-size:15px}
+.people{display:flex;flex-wrap:wrap;gap:16px}
+.pp{display:flex;flex-direction:column;align-items:center;gap:8px;width:96px;font-weight:700;font-size:15px}
+.pp img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:0 0 0 1px var(--line)}
+.page{padding:28px;display:flex;flex-direction:column;gap:16px}
+.page h1{font-size:30px}.page .note{color:var(--mu);margin:0}
+.src{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;border-top:1px solid var(--line);padding-top:12px}
+.src b{min-width:230px}.src a{color:#1d4ed8;word-break:break-all;font-size:14px}
+.empty{color:var(--mu);padding:12px 0}
+[hidden]{display:none!important}
+@media(max-width:900px){.app{flex-direction:column}.side{width:auto;padding:18px}.nav{flex-direction:row;flex-wrap:wrap}.main{padding:20px 16px}.hero{padding:24px}.hero h1{font-size:30px}}
 </style>
 </head>
 <body>
-<main>
-<h1>Новини Югоизток <span class="cnt" id="cnt"></span></h1>
-<div class="bar">
-<input type="search" id="q" placeholder="Търсене...">
-<select id="site"><option value="">Всички сайтове</option></select>
-<select id="tag"><option value="">Всички типове</option></select>
-<select id="topic"><option value="">Всички теми</option></select>
-<label><input type="checkbox" id="sv"> Само запазени</label>
+<div class="app">
+<aside class="side">
+ <div class="brand"><div class="logo"><img src="camel.jpg" alt="Логото на Сакарнюз: камила"></div><div><b>Редакционен панел</b><span>Югоизточна България</span></div></div>
+ <nav class="nav" id="nav"></nav>
+</aside>
+<main class="main">
+
+<div id="v-dash" style="display:flex;flex-direction:column;gap:28px">
+ <section class="card hero">
+  <div class="l">
+   <div class="by"><svg width="36" height="36" viewBox="0 0 40 40" fill="none" stroke="#D97757" stroke-width="3.6" stroke-linecap="round" aria-hidden="true"><path d="M20 3v10M20 27v10M3 20h10M27 20h10M8 8l7 7M25 25l7 7M32 8l-7 7M15 25l-7 7"/></svg><span>Claude работи за вашата редакция</span></div>
+   <h1>Виж какво Claude направи днес за теб</h1>
+   <p>Добре дошли в редакционния панел. Оттук ще управлявате информационните си източници, ще следите новини и документи, ще откривате журналистически теми и ще организирате редакционната работа.</p>
+  </div>
+  <div class="crawl"><div class="t"><span class="dot"></span><span>Последно обхождане</span></div><div class="v" id="c-when">…</div><div class="s" id="c-sub"></div></div>
+ </section>
+ <section class="tiles">
+  <div class="tile"><div class="a">Информационни източници</div><div class="b" id="t-src">–</div><div class="c" id="t-src-c">проверени при последното обхождане</div></div>
+  <div class="tile"><div class="a">Публикации</div><div class="b" id="t-news">–</div><div class="c">от последните 2 седмици</div></div>
+  <div class="tile"><div class="a">Журналистически теми</div><div class="b" id="t-top">0</div><div class="c">отбелязани за разработване</div></div>
+ </section>
+ <section class="cols">
+  <div class="feed">
+   <div class="bar"><h2>Нови публикации</h2>
+    <div class="ctl"><input type="search" id="q" placeholder="Търсене..." aria-label="Търсене"><select id="fs" aria-label="Източник"><option value="">Всички източници</option></select><select id="ft" aria-label="Тип"><option value="">Всички типове</option></select><select id="fp" aria-label="Тема"><option value="">Всички теми</option></select></div></div>
+   <div id="urg"></div>
+   <div id="list"><div class="item">Зареждане...</div></div>
+  </div>
+  <aside class="card side2"><h2>Журналистически теми</h2><p>Тук се копират публикациите, отбелязани като интересни.</p><div id="mini"></div></aside>
+ </section>
+ <section class="card team"><div style="flex:1 1 220px"><h2>Екипът на Сакарнюз</h2><small>Хората, които правят новините</small></div>
+  <div class="people">
+   <div class="pp"><img src="ivan.jpg" alt="Иван">Иван</div>
+   <div class="pp"><img src="natasha.jpg" alt="Наташа">Наташа</div>
+   <div class="pp"><img src="mihaela.jpg" alt="Михаела">Михаела</div>
+   <div class="pp"><img src="iva.jpg" alt="Ива">Ива</div>
+  </div></section>
 </div>
-<div id="urg"></div>
-<div id="list">Зареждане...</div>
+
+<section id="v-topics" class="card page" hidden>
+ <h1>Журналистически теми</h1>
+ <p class="note">Публикациите, които сте отбелязали като интересни. Пазят се в този браузър, на това устройство.</p>
+ <div id="topics"></div>
+</section>
+
+<section id="v-src" class="card page" hidden>
+ <h1>Институции / източници</h1>
+ <p class="note">Институциите, които агентът обхожда. Добавянето и редактирането от тази страница е следващата стъпка. Засега промените се правят чрез Claude.</p>
+ <div id="srcs"></div>
+</section>
+
 </main>
+</div>
 <script>
-var news=[],saved=new Set();
-try{saved=new Set(JSON.parse(localStorage.getItem('saved')||'[]'))}catch(e){}
+var news=[],meta=null,sites=[],topics={};
+try{topics=JSON.parse(localStorage.getItem('topics')||'{}')}catch(e){}
 var $=function(i){return document.getElementById(i)};
-function h(t,a,k){var e=document.createElement(t);for(var x in(a||{}))e[x]=a[x];(k||[]).forEach(function(c){e.append(c)});return e}
-function key(n){return (n.published||n.found.slice(0,10))+n.found}
+function h(t,a,k){var e=document.createElement(t);for(var x in(a||{}))e[x]=a[x];(k||[]).forEach(function(c){if(c!=null)e.append(c)});return e}
 function safe(u){return /^https?:\/\//.test(u)?u:'#'}
+function saveTopics(){try{localStorage.setItem('topics',JSON.stringify(topics))}catch(e){}}
+function ldate(n){var d=n.published||n.found.slice(0,10);return d.split('-').reverse().join('.')}
+function skey(n){return (n.published||n.found.slice(0,10))+n.found}
+function sofia(d,o){return new Intl.DateTimeFormat('bg-BG',Object.assign({timeZone:'Europe/Sofia'},o)).format(d)}
+function sday(d){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Sofia'}).format(d)}
+
+var views=[['dash','Табло','M3 11l9-8 9 8M5 10v10h14V10'],['src','Институции / източници','M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6'],['topics','Журналистически теми','M12 3l2.8 6 6.2.7-4.7 4.3 1.4 6.5L12 17.2 6.3 20.5l1.4-6.5L3 9.7 9.2 9z']];
+function show(v){views.forEach(function(x){$('v-'+x[0]).hidden=x[0]!==v});
+ Array.from($('nav').children).forEach(function(b,i){b.className=views[i][0]===v?'on':''});window.scrollTo(0,0)}
+function buildNav(){views.forEach(function(x){
+ var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('width','20');svg.setAttribute('height','20');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','2');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');svg.setAttribute('aria-hidden','true');
+ var p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d',x[2]);svg.appendChild(p);
+ var b=h('button',{type:'button'},[svg,h('span',{textContent:x[1]}),h('span',{className:'n',id:'n-'+x[0]})]);
+ b.onclick=function(){show(x[0])};$('nav').append(b)})}
+
 function fill(id,vals){Array.from(new Set(vals)).filter(Boolean).sort().forEach(function(v){$(id).append(h('option',{value:v,textContent:v}))})}
-function fmt(n){var d=n.published||n.found.slice(0,10);return d.split('-').reverse().join('.')}
-function render(){
- var q=$('q').value.toLowerCase(),s=$('site').value,t=$('tag').value,tp=$('topic').value,sv=$('sv').checked;
- var rows=news.filter(function(n){return(!s||n.site==s)&&(!t||n.tag==t)&&(!tp||n.topic==tp)&&(!sv||saved.has(n.url))&&
-  (!q||(n.title+' '+n.summary+' '+n.site).toLowerCase().includes(q))});
- $('cnt').textContent=rows.length+' от '+news.length;
- var u=news.filter(function(n){return n.urgent&&Date.now()-Date.parse(n.found)<48*36e5}).slice(0,5);
- $('urg').replaceChildren.apply($('urg'),u.length?[h('div',{className:'urg'},[h('b',{textContent:'Спешно: '})].concat(
-  u.map(function(n,i){return h('span',{},[i?' · ':'',h('a',{href:safe(n.url),target:'_blank',rel:'noopener',textContent:n.site+': '+n.title})])})))]:[]);
- $('list').replaceChildren.apply($('list'),rows.length?rows.slice(0,300).map(card):[h('p',{textContent:'Няма резултати.'})])}
-function card(n){
- var star=h('button',{textContent:saved.has(n.url)?'★ запазено':'☆ запази',className:saved.has(n.url)?'on':''});
- star.onclick=function(){saved.has(n.url)?saved.delete(n.url):saved.add(n.url);
-  try{localStorage.setItem('saved',JSON.stringify(Array.from(saved)))}catch(e){}render()};
- var kids=[star];
- if(n.topic){var b=h('button',{textContent:'# '+n.topic});b.onclick=function(){$('topic').value=n.topic;render()};kids.push(b)}
- return h('div',{className:'card'},[
-  h('div',{className:'meta',textContent:(n.urgent?'🚨 ':'')+n.site+' · '+n.tag+' · '+fmt(n)}),
-  h('h2',{},[h('a',{href:safe(n.url),target:'_blank',rel:'noopener',textContent:n.title})]),
-  h('p',{textContent:n.summary}),h('div',{},kids)])}
-fetch('news.json?'+Date.now()).then(function(r){return r.json()}).then(function(d){
- news=d.sort(function(a,b){return key(b)<key(a)?-1:1});
- fill('site',news.map(function(n){return n.site}));fill('tag',news.map(function(n){return n.tag}));
- fill('topic',news.map(function(n){return n.topic}));
- ['q','site','tag','topic','sv'].forEach(function(i){$(i).oninput=render});render()
-}).catch(function(){$('list').textContent='Още няма данни. Пуснете агента от Actions.'});
+
+function card(n,inTopics){
+ var on=!!topics[n.url];
+ var star=h('button',{type:'button',className:'star'+(on?' on':''),textContent:on?'★ В журналистически теми':'☆ Интересна тема'});
+ star.setAttribute('aria-pressed',on?'true':'false');
+ star.onclick=function(){if(topics[n.url])delete topics[n.url];else topics[n.url]=n;saveTopics();renderAll()};
+ var acts=[star];
+ if(n.topic&&!inTopics){var t=h('button',{type:'button',className:'tag',textContent:'# '+n.topic});t.onclick=function(){$('fp').value=n.topic;renderFeed()};acts.push(t)}
+ acts.push(h('a',{className:'orig',href:safe(n.url),target:'_blank',rel:'noopener',textContent:'Отвори оригинала'}));
+ return h('article',{className:'item'},[
+  h('div',{className:'m'},[n.urgent?h('span',{className:'pill',textContent:'Спешно'}):null,h('span',{textContent:n.site+' · '+n.tag+' · '+ldate(n)})]),
+  h('h3',{},[h('a',{href:safe(n.url),target:'_blank',rel:'noopener',textContent:n.title})]),
+  h('p',{textContent:n.summary}),h('div',{className:'acts'},acts)])}
+
+function renderFeed(){
+ var q=$('q').value.toLowerCase(),s=$('fs').value,t=$('ft').value,p=$('fp').value;
+ var rows=news.filter(function(n){return(!s||n.site==s)&&(!t||n.tag==t)&&(!p||n.topic==p)&&(!q||(n.title+' '+n.summary+' '+n.site).toLowerCase().includes(q))});
+ var u=news.filter(function(n){return n.urgent&&Date.now()-Date.parse(n.published||n.found)<3*864e5}).slice(0,5);
+ $('urg').replaceChildren.apply($('urg'),u.length?[h('div',{className:'urg'},[h('b',{textContent:'Спешно: '})].concat(u.map(function(n,i){return h('span',{},[i?' · ':'',h('a',{href:safe(n.url),target:'_blank',rel:'noopener',textContent:n.site+': '+n.title})])})))]:[]);
+ $('list').replaceChildren.apply($('list'),rows.length?rows.slice(0,300).map(function(n){return card(n,false)}):[h('div',{className:'item empty',textContent:news.length?'Няма резултати.':'Още няма данни. Пуснете агента от Actions.'})])}
+
+function renderTopics(){
+ var arr=Object.keys(topics).map(function(k){return topics[k]}).sort(function(a,b){return skey(b)<skey(a)?-1:1});
+ $('t-top').textContent=arr.length;$('n-topics').textContent=arr.length||'';
+ $('mini').replaceChildren.apply($('mini'),arr.length?arr.slice(0,6).map(function(n){return h('div',{className:'mini'},[h('small',{textContent:n.site+' · '+ldate(n)}),h('a',{href:safe(n.url),target:'_blank',rel:'noopener',textContent:n.title})])}):[h('div',{className:'mini empty',textContent:'Още няма отбелязани.'})]);
+ $('topics').replaceChildren.apply($('topics'),arr.length?arr.map(function(n){return card(n,true)}):[h('div',{className:'empty',textContent:'Още няма отбелязани публикации. Натиснете „Интересна тема“ на публикация от таблото.'})])}
+
+function renderSources(){
+ $('n-src').textContent=sites.length||'';
+ $('srcs').replaceChildren.apply($('srcs'),sites.length?sites.map(function(s){var us=s.urls||[s.url];return h('div',{className:'src'},[h('b',{textContent:s.name})].concat(us.map(function(u){return h('a',{href:safe(u),target:'_blank',rel:'noopener',textContent:decodeURI(u)})})))}):[h('div',{className:'empty',textContent:'Списъкът не се зареди.'})])}
+
+function renderMeta(){
+ $('t-news').textContent=news.length;$('n-dash').textContent='';
+ if(!meta){$('c-when').textContent='Още няма данни';$('c-sub').textContent='Пуснете агента от Actions.';$('t-src').textContent=sites.length||'–';return}
+ var d=new Date(meta.last_run),now=new Date(),day;
+ var today=sday(now),yest=sday(new Date(now-864e5));
+ day=sday(d)===today?'Днес':sday(d)===yest?'Вчера':sofia(d,{day:'2-digit',month:'2-digit'});
+ $('c-when').textContent=day+', '+sofia(d,{hour:'2-digit',minute:'2-digit',hour12:false})+' ч.';
+ var hr=parseInt(sofia(now,{hour:'2-digit',hour12:false}),10);
+ var next=hr<10?'днес в 10:00':hr<18?'днес в 18:00':'утре в 10:00';
+ $('c-sub').textContent='Намерени '+meta.new+' нови. Следва '+next+'.';
+ $('t-src').textContent=meta.sources_ok+' от '+meta.sources_total;
+}
+function renderAll(){renderFeed();renderTopics()}
+
+function getJSON(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)throw 0;return r.json()})}
+buildNav();show('dash');
+Promise.all([getJSON('news.json').catch(function(){return[]}),getJSON('meta.json').catch(function(){return null}),getJSON('sites.json').catch(function(){return[]})]).then(function(r){
+ var lim=Date.now()-14*864e5;
+ news=r[0].filter(function(n){return !(Date.parse(n.published||n.found)<lim)}).sort(function(a,b){return skey(b)<skey(a)?-1:1});
+ meta=r[1];sites=r[2];
+ fill('fs',news.map(function(n){return n.site}));fill('ft',news.map(function(n){return n.tag}));fill('fp',news.map(function(n){return n.topic}));
+ ['q','fs','ft','fp'].forEach(function(i){$(i).oninput=renderFeed});
+ renderMeta();renderSources();renderAll();
+});
 </script>
 </body>
 </html>
