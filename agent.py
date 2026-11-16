@@ -13,7 +13,7 @@ import requests
 from bs4 import BeautifulSoup
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SITES, SEEN, NEWS = (os.path.join(HERE, f) for f in ("sites.json", "seen.json", "news.json"))
+SITES, SEEN, NEWS, META = (os.path.join(HERE, f) for f in ("sites.json", "seen.json", "news.json", "meta.json"))
 MODEL = "claude-haiku-5-5"
 MAX_NEW = 12      # нови връзки на сайт за един пуск
 BACKFILL = 20     # при първо виждане на сайт: толкова най-нови се проверяват
@@ -118,11 +118,23 @@ def feed_items(url):
     return out
 
 
+def clean_title(t):
+    """Маха от края „вторник, 03 ноември 2026 257“ (дата и брояч на прегледите)."""
+    return re.sub(r"\s+(понеделник|вторник|сряда|четвъртък|петък|събота|неделя),?\s+\d{1,2}\s+\S+\s+\d{4}(\s+\d+)?\s*$", "", t, flags=re.I).strip()
+
+
+def link_root(base, soup):
+    """Адрес, спрямо който се разрешават относителните връзки (взема предвид <base href>)."""
+    b = soup.find("base", href=True)
+    return urljoin(base, b["href"].strip()) if b else base
+
+
 def sections(base, soup):
     out = []
+    root = link_root(base, soup)
     for a in soup.find_all("a", href=True):
         t = a.get_text(" ", strip=True)
-        u = urldefrag(urljoin(base, a["href"].strip()))[0]
+        u = urldefrag(urljoin(root, a["href"].strip()))[0]
         if (len(t) <= 40 and SECTION.search(t) and host(u) == host(base)
                 and u.rstrip("/") != base.rstrip("/") and u.startswith("http") and u not in out):
             out.append(u)
@@ -130,6 +142,7 @@ def sections(base, soup):
 
 
 def html_items(base, soup):
+    root = link_root(base, soup)
     for t in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
         t.decompose()
     for t in soup.find_all(class_=re.compile(r"menu|nav|breadcrumb|sidebar", re.I)):
@@ -143,8 +156,8 @@ def html_items(base, soup):
         href = a["href"].strip()
         if href.startswith(("javascript:", "mailto:", "tel:", "#")):
             continue
-        url = urldefrag(urljoin(base, href))[0]
-        title = re.sub(r"\s+", " ", a.get_text(" ", strip=True) or a.get("title", "")).strip()
+        url = urldefrag(urljoin(root, href))[0]
+        title = clean_title(re.sub(r"\s+", " ", a.get_text(" ", strip=True) or a.get("title", "")).strip())
         if (host(url) != host(base) or url.rstrip("/") == base.rstrip("/")
                 or len(title) < 20 or url in seen):
             continue
@@ -327,10 +340,11 @@ def run(sites):
             print("Не е време за обхождане (10:00 или 18:00) или вече е направено. Край.")
             return
         state["_slot"] = slot
-    backfill = not state.get("_v3")
+    backfill = not state.get("_v4")
     if backfill:
         news = []  # преизграждане с новия начин за определяне на датата
     have = {n["url"] for n in news}
+    stats = {"ok": 0, "new": 0}
     for site in sites:
         name = site["name"]
         try:
@@ -338,6 +352,7 @@ def run(sites):
         except Exception as e:
             print(f"[{name}] грешка: {e}")
             continue
+        stats["ok"] += 1
         seen = state.get(name, [])
         first = backfill or name not in state
         if first:
@@ -368,16 +383,19 @@ def run(sites):
                        "urgent": bool(res.get("urgent")), "published": pub,
                        "found": datetime.now(timezone.utc).isoformat(timespec="seconds")}
                 news.append(rec)
+                stats["new"] += 1
                 have.add(rec["url"])
                 if rec["urgent"] and not first and is_recent(rec["published"]):
                     telegram(rec)
             except Exception as e:
                 print(f"[{name}] неуспех за {item['url']}: {e}")
         state[name] = seen[-MAX_SEEN:]
-    state["_v3"] = True
+    state["_v4"] = True
     save(SEEN, state)
     news = [n for n in news if age_days(n.get("published"), n.get("found")) <= MAX_AGE_DAYS]
     save(NEWS, news[-MAX_NEWS:])
+    save(META, {"last_run": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                "sources_total": len(sites), "sources_ok": stats["ok"], "new": stats["new"]})
 
 
 if __name__ == "__main__":
