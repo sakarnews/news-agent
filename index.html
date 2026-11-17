@@ -129,7 +129,7 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
  <h2 style="font-size:20px">Какво да търсите</h2>
  <ul class="eoplist"><li>Само договори със стойност до <b>100 000 €</b>.</li><li>Само последните 14 дни.</li><li>Възложители – общините по-долу. Натиснете името, за да го копирате, и го поставете в полето за възложител.</li></ul>
  <div class="chips" id="eopchips"></div>
- <div id="eopmsg" class="note"></div>
+ <div id="eopmsg" class="note" style="font-weight:600;min-height:1.4em"></div>
 </section>
 
 <section id="v-src" class="card page" hidden>
@@ -211,9 +211,12 @@ function renderAll(){renderFeed();renderTopics()}
 
 function getJSON(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)throw 0;return r.json()})}
 ['Хасково','Димитровград','Минерални бани','Стамболово','Маджарово','Любимец','Свиленград','Харманли','Тополовград','Ивайловград','Симеоновград'].forEach(function(n){
- var b=h('button',{type:'button',textContent:n});
- b.onclick=function(){var ok=function(){$('eopmsg').textContent='Копирано: „Община '+n+'“'};
-  try{navigator.clipboard.writeText('Община '+n).then(ok,function(){$('eopmsg').textContent='Търсете: Община '+n})}catch(e){$('eopmsg').textContent='Търсете: Община '+n}};
+ var txt='Община '+n,b=h('button',{type:'button',textContent:n});
+ function done(ok){b.textContent=ok?'✓ Копирано: '+txt:'Търсете: '+txt;b.style.background=ok?'#2F7D4F':'#fff';b.style.color=ok?'#fff':'';
+  $('eopmsg').textContent=ok?'Копирано „'+txt+'“. Поставете го в полето за възложител в ЕОП (Ctrl+V).':'Не се копира автоматично. Търсете ръчно: '+txt;
+  setTimeout(function(){b.textContent=n;b.style.background='';b.style.color=''},4000)}
+ function fallback(){var ok=false;try{var t=document.createElement('textarea');t.value=txt;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();ok=document.execCommand('copy');t.remove()}catch(e){}done(ok)}
+ b.onclick=function(){try{navigator.clipboard.writeText(txt).then(function(){done(true)},fallback)}catch(e){fallback()}};
  $('eopchips').append(b)});
 buildNav();show('dash');
 Promise.all([getJSON('news.json').catch(function(){return[]}),getJSON('meta.json').catch(function(){return null}),getJSON('sites.json').catch(function(){return[]})]).then(function(r){
