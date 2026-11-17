@@ -92,5 +92,16 @@
  {
   "name": "Община Минерални бани",
   "url": "https://www.mineralnibani.bg/"
+ },
+ {
+  "name": "Община Гълъбово",
+  "url": "https://galabovo.bg/",
+  "urls": [
+   "https://galabovo.bg/",
+   "https://galabovo.bg/polezna-informaciya/novini/",
+   "https://galabovo.bg/polezna-informaciya/obqvi/",
+   "https://galabovo.bg/polezna-informaciya/targove-i-konkursi/",
+   "https://galabovo.bg/obshtinski-savet/novini/"
+  ]
  }
 ]
