@@ -43,9 +43,15 @@ SYSTEM = """Ти си помощник на главен редактор на �
 
 
 def get(url):
-    r = requests.get(url, headers=HEADERS, timeout=25)
-    r.raise_for_status()
-    return r
+    """Бавните сайтове получават втори опит и по-дълго време за отговор."""
+    for attempt in (1, 2):
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=25 if attempt == 1 else 60)
+            r.raise_for_status()
+            return r
+        except (requests.Timeout, requests.ConnectionError):
+            if attempt == 2:
+                raise
 
 
 def host(url):
