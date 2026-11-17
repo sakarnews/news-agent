@@ -73,6 +73,12 @@ def parse_date(text):
     return dt.isoformat()
 
 
+def labeled_date(text):
+    """Дата след изричен надпис „Дата на публикуване:“ / „Публикувано на“ (най-надеждният източник)."""
+    m = re.search(r"(Дата\s+на\s+публикуване|Публикувано\s+на|Публикувана\s+на)\s*:?", text or "", re.I)
+    return parse_date(text[m.end():m.end() + 40]) if m else None
+
+
 def listing_date(a):
     """Дата на публикуване, както е изписана до връзката в списъка с новини."""
     d = parse_date(a.get_text(" ", strip=True))
@@ -226,7 +232,7 @@ def _find_items(site):
 
 def fetch_article(url, text_date=False):
     """Връща текста на страницата и датата ѝ на публикуване (ако се намери)."""
-    empty = {"text": "", "date": None}
+    empty = {"text": "", "date": None, "label": None}
     try:
         r = get(url)
         ctype = r.headers.get("content-type", "")
@@ -234,10 +240,11 @@ def fetch_article(url, text_date=False):
             from pypdf import PdfReader
             pages = PdfReader(io.BytesIO(r.content)).pages[:3]
             text = re.sub(r"\s+", " ", " ".join(p.extract_text() or "" for p in pages))[:3500]
-            return {"text": text, "date": None}
+            return {"text": text, "date": None, "label": None}
         if "html" not in ctype:
             return empty
         soup = BeautifulSoup(r.content, "html.parser")
+        label = labeled_date(re.sub(r"\s+", " ", soup.get_text(" ", strip=True)))
         pub = meta_date(soup)
         for t in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
             t.decompose()
@@ -245,7 +252,7 @@ def fetch_article(url, text_date=False):
         text = re.sub(r"\s+", " ", node.get_text(" ", strip=True))[:3500]
         if not pub and text_date:  # сайтове, които пишат датата в началото на материала
             pub = parse_date(text[:600])
-        return {"text": text, "date": pub}
+        return {"text": text, "date": pub, "label": label}
     except Exception:
         return empty
 
@@ -378,15 +385,18 @@ def run(sites):
             batch = [i for i in items if i["url"] not in set(seen)][:site.get("max_new", MAX_NEW)]
         print(f"[{name}] намерени {len(items)}, за обработка: {len(batch)}")
         skip = {"без дата": 0, "стари": 0, "ключови думи": 0, "нерелевантни": 0}
+        old_examples = []
         for item in reversed(batch):
             if item["url"] in have:
                 continue
             try:
                 art = fetch_article(item["url"], site.get("date_from_text", False))
-                pub = item.get("date") or art["date"]  # дата на публикуване от сайта
+                pub = art["label"] or item.get("date") or art["date"]  # дата на публикуване: надпис > списък > метаданни
                 if (pub and age_days(pub) > MAX_AGE_DAYS) or (not pub and first):
                     seen.append(item["url"])  # по-старо от 2 седмици или без дата при първо обхождане
                     skip["стари" if pub else "без дата"] += 1
+                    if pub and len(old_examples) < 3:
+                        old_examples.append(f"{pub} {item['url']}")
                     continue
                 if site.get("keywords") and not kw_match(site["keywords"], item["title"], art["text"]):
                     seen.append(item["url"])  # не съдържа нужните ключови думи
@@ -411,6 +421,8 @@ def run(sites):
                 print(f"[{name}] неуспех за {item['url']}: {e}")
         if batch:
             print(f"[{name}] пропуснати: " + ", ".join(f"{k} {v}" for k, v in skip.items() if v))
+            for ex in old_examples:
+                print(f"[{name}]   пример за старо: {ex}")
         state[name] = seen[-MAX_SEEN:]
     state["_v5"] = True
     save(SEEN, state)
