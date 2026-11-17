@@ -20,7 +20,13 @@
    "https://www.simeonovgrad.bg/article/id_main/113/type_id/5",
    "https://www.simeonovgrad.bg/article/id_main/92/type_id/5",
    "https://www.simeonovgrad.bg/article/id_main/26/type_id/5"
-  ]
+  ],
+  "link_patterns": [
+   "/news/read/",
+   "/article/read/"
+  ],
+  "date_from_text": true,
+  "rev": "2026-11-17"
  },
  {
   "name": "РИОСВ Хасково",

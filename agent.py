@@ -189,6 +189,14 @@ def page_items(url, rss=None, follow=False, feed=True):
 
 
 def find_items(site):
+    items = _find_items(site)
+    pats = site.get("link_patterns")
+    if pats:
+        items = [i for i in items if any(p in i["url"] for p in pats)]
+    return items
+
+
+def _find_items(site):
     out, seen = [], set()
     if site.get("follow_titles"):  # само разделите, чиито заглавия съдържат тези фрази
         soup = BeautifulSoup(get(site["url"]).content, "html.parser")
@@ -216,7 +224,7 @@ def find_items(site):
     return out
 
 
-def fetch_article(url):
+def fetch_article(url, text_date=False):
     """Връща текста на страницата и датата ѝ на публикуване (ако се намери)."""
     empty = {"text": "", "date": None}
     try:
@@ -234,7 +242,10 @@ def fetch_article(url):
         for t in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
             t.decompose()
         node = soup.find("article") or soup.find("main") or soup.body or soup
-        return {"text": re.sub(r"\s+", " ", node.get_text(" ", strip=True))[:3500], "date": pub}
+        text = re.sub(r"\s+", " ", node.get_text(" ", strip=True))[:3500]
+        if not pub and text_date:  # сайтове, които пишат датата в началото на материала
+            pub = parse_date(text[:600])
+        return {"text": text, "date": pub}
     except Exception:
         return empty
 
@@ -354,28 +365,37 @@ def run(sites):
             continue
         stats["ok"] += 1
         seen = state.get(name, [])
-        first = backfill or name not in state
+        revs = state.setdefault("_rev", {})
+        reset = bool(site.get("rev")) and revs.get(name) != site["rev"]
+        if reset:
+            seen = []
+            revs[name] = site["rev"]
+        first = backfill or name not in state or reset
         if first:
             batch = items[:site.get("backfill", BACKFILL)]
             seen = list(dict.fromkeys(seen + [i["url"] for i in items[site.get("backfill", BACKFILL):]]))
         else:
             batch = [i for i in items if i["url"] not in set(seen)][:site.get("max_new", MAX_NEW)]
-        print(f"[{name}] за обработка: {len(batch)}")
+        print(f"[{name}] намерени {len(items)}, за обработка: {len(batch)}")
+        skip = {"без дата": 0, "стари": 0, "ключови думи": 0, "нерелевантни": 0}
         for item in reversed(batch):
             if item["url"] in have:
                 continue
             try:
-                art = fetch_article(item["url"])
+                art = fetch_article(item["url"], site.get("date_from_text", False))
                 pub = item.get("date") or art["date"]  # дата на публикуване от сайта
                 if (pub and age_days(pub) > MAX_AGE_DAYS) or (not pub and first):
                     seen.append(item["url"])  # по-старо от 2 седмици или без дата при първо обхождане
+                    skip["стари" if pub else "без дата"] += 1
                     continue
                 if site.get("keywords") and not kw_match(site["keywords"], item["title"], art["text"]):
                     seen.append(item["url"])  # не съдържа нужните ключови думи
+                    skip["ключови думи"] += 1
                     continue
                 res = analyze(client, name, item["title"], art["text"], site.get("rule", ""))
                 seen.append(item["url"])
                 if not res.get("relevant", True):
+                    skip["нерелевантни"] += 1
                     continue
                 rec = {"site": name, "title": item["title"], "url": item["url"],
                        "tag": res["tag"], "summary": res["summary"] or item["title"],
@@ -389,6 +409,8 @@ def run(sites):
                     telegram(rec)
             except Exception as e:
                 print(f"[{name}] неуспех за {item['url']}: {e}")
+        if batch:
+            print(f"[{name}] пропуснати: " + ", ".join(f"{k} {v}" for k, v in skip.items() if v))
         state[name] = seen[-MAX_SEEN:]
     state["_v5"] = True
     save(SEEN, state)
