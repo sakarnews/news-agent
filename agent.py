@@ -147,27 +147,40 @@ def sections(base, soup):
     return out
 
 
+PATS = []  # шаблони на връзките за текущия сайт (link_patterns)
+
+
 def html_items(base, soup):
     root = link_root(base, soup)
-    for t in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
+    for t in soup(["script", "style"] if PATS else ["script", "style", "nav", "header", "footer", "aside", "form"]):
         t.decompose()
-    for t in soup.find_all(class_=re.compile(r"menu|nav|breadcrumb|sidebar", re.I)):
+    for t in ([] if PATS else soup.find_all(class_=re.compile(r"menu|nav|breadcrumb|sidebar", re.I))):
         if t.name not in ("html", "body", "main"):
             try:
                 t.decompose()
             except Exception:
                 pass
-    out, seen = [], set()
+    out, idx = [], {}
     for a in soup.find_all("a", href=True):
         href = a["href"].strip()
         if href.startswith(("javascript:", "mailto:", "tel:", "#")):
             continue
         url = urldefrag(urljoin(root, href))[0]
         title = clean_title(re.sub(r"\s+", " ", a.get_text(" ", strip=True) or a.get("title", "")).strip())
-        if (host(url) != host(base) or url.rstrip("/") == base.rstrip("/")
-                or len(title) < 20 or url in seen):
+        if host(url) != host(base) or url.rstrip("/") == base.rstrip("/"):
             continue
-        seen.add(url)
+        if PATS and any(p in url for p in PATS):
+            if len(title) < 20:  # напр. „Прочети“ - взимаме текста на съседния блок
+                par = a.find_parent(["li", "div", "tr", "p", "article"])
+                if par:
+                    title = clean_title(re.sub(r"\s+", " ", par.get_text(" ", strip=True))[:160])
+        elif len(title) < 20:
+            continue
+        if url in idx:
+            if len(title) > len(out[idx[url]]["title"]):
+                out[idx[url]]["title"] = title
+            continue
+        idx[url] = len(out)
         out.append({"title": title, "url": url, "date": listing_date(a)})
     return out
 
@@ -195,8 +208,10 @@ def page_items(url, rss=None, follow=False, feed=True):
 
 
 def find_items(site):
-    items = _find_items(site)
+    global PATS
     pats = site.get("link_patterns")
+    PATS = pats or []
+    items = _find_items(site)
     if pats:
         items = [i for i in items if any(p in i["url"] for p in pats)]
     return items
