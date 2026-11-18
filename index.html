@@ -84,6 +84,16 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
 .mc .d.e{background:var(--clay);color:#fff;font-weight:700;cursor:pointer;position:relative}
 .mc .d.e.sel{background:#8A3A1D}
 .mc .hint{color:var(--mu);font-size:12px;margin-top:8px}
+.td h4{margin:0 0 8px;font-size:15px}
+.td form{display:flex;gap:6px;margin-bottom:8px}
+.td input[type=text]{flex:1;min-width:0;height:36px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font:inherit;font-size:14px;background:#fff;color:var(--tx)}
+.td form button{height:36px;padding:0 12px;border:0;border-radius:8px;background:var(--clay);color:#fff;font-weight:700;cursor:pointer}
+.td ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.td li{display:flex;align-items:flex-start;gap:8px;font-size:14px;line-height:1.35;padding:4px 0}
+.td li input{margin-top:3px;flex:none;width:16px;height:16px}
+.td li span{flex:1;word-break:break-word}.td li.done span{text-decoration:line-through;color:var(--mu)}
+.td li button{border:0;background:none;color:var(--mu);font-size:16px;cursor:pointer;padding:0 4px;line-height:1}
+.td .clr{border:0;background:none;color:var(--mu);font-size:12px;margin-top:6px;cursor:pointer;text-decoration:underline;padding:0}
 [hidden]{display:none!important}
 @media(max-width:900px){.app{flex-direction:column}.side{width:auto;padding:18px}.nav{flex-direction:row;flex-wrap:wrap}.main{padding:20px 16px}.hero{padding:24px}.hero h1{font-size:30px}}
 </style>
@@ -94,6 +104,7 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
  <div class="brand"><div class="logo"><img src="camel.jpg" alt="Логото на Сакарнюз: камила"></div><div><b>Редакционен панел</b><span>Югоизточна България</span></div></div>
  <nav class="nav" id="nav"></nav>
  <div class="mc" id="minical" aria-label="Календар на месеца"></div>
+ <div class="mc td" id="todo" aria-label="Задачи"></div>
 </aside>
 <main class="main">
 
@@ -264,6 +275,23 @@ function renderCal(){
  $('cal').replaceChildren.apply($('cal'),kids.length?kids:[h('div',{className:'empty',textContent:'Още няма предстоящи събития. Те се появяват, когато агентът открие дати в нови публикации.'})])}
 function renderAll(){renderFeed();renderTopics();renderCal();renderMini()}
 
+var tasks=[];
+try{tasks=JSON.parse(localStorage.getItem('tasks')||'[]')}catch(e){}
+function saveTasks(){try{localStorage.setItem('tasks',JSON.stringify(tasks))}catch(e){}}
+function renderTodo(){
+ var inp=h('input',{type:'text',placeholder:'Нова задача...',maxLength:200}),add=h('button',{type:'submit',textContent:'+'}),f=h('form',{},[inp,add]);
+ inp.setAttribute('aria-label','Нова задача');add.setAttribute('aria-label','Добави задача');
+ f.onsubmit=function(e){e.preventDefault();var t=inp.value.trim();if(!t)return;tasks.unshift({t:t,d:false});saveTasks();renderTodo()};
+ var ul=h('ul',{},tasks.map(function(k,i){
+  var c=h('input',{type:'checkbox',checked:k.d});c.setAttribute('aria-label','Изпълнена');
+  c.onchange=function(){k.d=c.checked;tasks.sort(function(a,b){return a.d-b.d});saveTasks();renderTodo()};
+  var x=h('button',{type:'button',textContent:'×'});x.setAttribute('aria-label','Изтрий задачата');
+  x.onclick=function(){tasks.splice(i,1);saveTasks();renderTodo()};
+  return h('li',{className:k.d?'done':''},[c,h('span',{textContent:k.t}),x])}));
+ var kids=[h('h4',{textContent:'Задачи'}),f,ul];
+ if(tasks.some(function(k){return k.d})){var cl=h('button',{type:'button',className:'clr',textContent:'Изчисти изпълнените'});cl.onclick=function(){tasks=tasks.filter(function(k){return!k.d});saveTasks();renderTodo()};kids.push(cl)}
+ else if(!tasks.length)kids.push(h('div',{className:'hint',textContent:'Записвайте тук задачи. Пазят се в този браузър.'}));
+ $('todo').replaceChildren.apply($('todo'),kids)}
 function getJSON(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)throw 0;return r.json()})}
 ['Хасково','Димитровград','Минерални бани','Стамболово','Маджарово','Любимец','Свиленград','Харманли','Тополовград','Ивайловград','Симеоновград'].forEach(function(n){
  var txt='Община '+n,b=h('button',{type:'button',textContent:n});
@@ -273,7 +301,7 @@ function getJSON(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)thr
  function fallback(){var ok=false;try{var t=document.createElement('textarea');t.value=txt;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();ok=document.execCommand('copy');t.remove()}catch(e){}done(ok)}
  b.onclick=function(){try{navigator.clipboard.writeText(txt).then(function(){done(true)},fallback)}catch(e){fallback()}};
  $('eopchips').append(b)});
-buildNav();show('dash');
+buildNav();show('dash');renderTodo();
 Promise.all([getJSON('news.json').catch(function(){return[]}),getJSON('meta.json').catch(function(){return null}),getJSON('sites.json').catch(function(){return[]})]).then(function(r){
  var lim=Date.now()-14*864e5;
  news=r[0].filter(function(n){return !(Date.parse(n.published||n.found)<lim)}).sort(function(a,b){return skey(b)<skey(a)?-1:1});
