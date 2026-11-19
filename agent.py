@@ -434,9 +434,10 @@ def eop_records(url):
 
 
 def eop_run(site, news, have):
-    """Договори на общините от списъка до зададена стойност, от отворените данни на ЕОП."""
+    """Договори на общините от списъка над зададена стойност (min_value), от отворените данни на ЕОП."""
     munis = [m.casefold() for m in site.get("municipalities", [])]
-    limit = float(site.get("max_value", 100000))
+    lo = float(site.get("min_value", 0))
+    hi = float(site["max_value"]) if site.get("max_value") else None
     pat = re.compile(r"^\s*община\s+(" + "|".join(re.escape(m) for m in munis) + r")\b", re.I)
     today = datetime.now(timezone.utc).date()
     added = scanned = noval = 0
@@ -463,7 +464,7 @@ def eop_run(site, news, have):
                 if not pat.match(buyer):
                     continue
                 val = eop_money(r)
-                if val is not None and val > limit:
+                if val is not None and (val < lo or (hi is not None and val > hi)):
                     continue
                 noval += val is None
                 uid = "|".join(str(r.get(k, "")) for k in ("noticeId", "lotIdentifier", "contractNumber"))
@@ -486,6 +487,9 @@ def eop_run(site, news, have):
                 sup = str(r.get("supplierName") or "").strip()
                 money = f"{val:,.2f}".replace(",", " ").replace(".", ",") + " €" if val is not None else "стойност не е посочена"
                 summ = f"{buyer.title()} има договор с {sup or 'неизвестен изпълнител'} на стойност {money}. Предмет: {subject[:220]}."
+                proc = str(r.get("procedureType") or "").strip()
+                if proc:
+                    summ += f" Процедура: {proc}" + (" (пряко договаряне)." if "пряк" in proc.casefold() or r.get("directAwardJustification") else ".")
                 if r.get("contractNumber"):
                     summ += f" Договор № {r['contractNumber']}" + (f" от {r['contractDate']}." if r.get("contractDate") else ".")
                 rec = {"site": site["name"], "title": f"{buyer.title()}: {subject[:130]}", "url": url, "tag": "договор",
