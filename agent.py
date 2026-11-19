@@ -6,7 +6,7 @@
 """
 import html, io, json, os, re, sys
 from datetime import date, datetime, timedelta, timezone
-from urllib.parse import urljoin, urldefrag, urlparse
+from urllib.parse import quote, urljoin, urldefrag, urlparse
 
 import feedparser
 import requests
@@ -376,6 +376,15 @@ def save(path, data):
 
 def run_test(sites):
     for s in sites:
+        if s.get("type") == "eop":
+            try:
+                day = (datetime.now(timezone.utc).date() - timedelta(days=1)).isoformat()
+                files = eop_day_files(day)
+                n = sum(len(eop_records(f)) for f in files)
+                print(f"{'✓' if files else '⚠'} {s['name']}: файлове за {day}: {len(files)}, записа: {n}\n")
+            except Exception as e:
+                print(f"✗ {s['name']}: грешка ({e})\n")
+            continue
         try:
             items = find_items(s)
         except Exception as e:
@@ -385,6 +394,99 @@ def run_test(sites):
         for i in items[:5]:
             print(f"   - {i['title'][:90]}")
         print()
+
+
+EOP_BASE = "https://storage.eop.bg/open-data-{}/"
+EOP_SEARCH = "https://app.eop.bg/today/reporting/search"
+EOP_VALUE_KEYS = ("contractValue", "currentContractValue", "lastContractValue", "value", "contractValueAmount")
+
+
+def eop_money(rec):
+    """Стойност в евро (число) или None."""
+    for k in EOP_VALUE_KEYS:
+        v = rec.get(k)
+        if v in (None, ""):
+            continue
+        try:
+            x = float(str(v).replace("\xa0", "").replace(" ", "").replace(",", "."))
+        except ValueError:
+            continue
+        return x / 1.95583 if str(rec.get("contractCurrency", "EUR")).upper() == "BGN" else x
+    return None
+
+
+def eop_day_files(day):
+    """Адресите на файловете с договори за дадена дата (или [])."""
+    url = EOP_BASE.format(day)
+    r = requests.get(url, headers=HEADERS, timeout=40)
+    if r.status_code != 200:
+        return []
+    keys = re.findall(r"<Key>([^<]+)</Key>", r.text)
+    return [url + quote(k) for k in keys if "договори" in k.casefold() and "анекс" not in k.casefold()]
+
+
+def eop_records(url):
+    body = requests.get(url, headers=HEADERS, timeout=120).content
+    data = json.loads(body)
+    if isinstance(data, dict):
+        data = data.get("releases") or data.get("records") or data.get("data") or []
+    return [d for d in data if isinstance(d, dict)]
+
+
+def eop_run(site, news, have):
+    """Договори на общините от списъка до зададена стойност, от отворените данни на ЕОП."""
+    munis = [m.casefold() for m in site.get("municipalities", [])]
+    limit = float(site.get("max_value", 100000))
+    pat = re.compile(r"^\s*община\s+(" + "|".join(re.escape(m) for m in munis) + r")\b", re.I)
+    today = datetime.now(timezone.utc).date()
+    added = scanned = noval = 0
+    shown = False
+    for back in range(0, MAX_AGE_DAYS + 1):
+        day = (today - timedelta(days=back)).isoformat()
+        try:
+            files = eop_day_files(day)
+        except Exception as e:
+            print(f"[{site['name']}] {day}: {e}")
+            continue
+        for fu in files:
+            try:
+                recs = eop_records(fu)
+            except Exception as e:
+                print(f"[{site['name']}] файл {day}: {e}")
+                continue
+            scanned += len(recs)
+            if recs and not shown:
+                shown = True
+                print(f"[{site['name']}] полета в договорите: {', '.join(list(recs[0])[:40])}")
+            for r in recs:
+                buyer = str(r.get("buyerName") or "")
+                if not pat.match(buyer):
+                    continue
+                val = eop_money(r)
+                if val is not None and val > limit:
+                    continue
+                noval += val is None
+                uid = "|".join(str(r.get(k, "")) for k in ("noticeId", "lotIdentifier", "contractNumber"))
+                url = (r.get("linkToOjEu") or EOP_SEARCH) + "#" + quote(uid)
+                if url in have:
+                    continue
+                pub = str(r.get("publicationDate") or "")[:10] or day
+                if age_days(pub) > MAX_AGE_DAYS:
+                    continue
+                subject = re.sub(r"\s+", " ", str(r.get("contractSubject") or r.get("tenderName") or "")).strip()
+                sup = str(r.get("supplierName") or "").strip()
+                money = f"{val:,.2f}".replace(",", " ").replace(".", ",") + " €" if val is not None else "стойност не е посочена"
+                summ = f"{buyer.title()} има договор с {sup or 'неизвестен изпълнител'} на стойност {money}. Предмет: {subject[:220]}."
+                if r.get("contractNumber"):
+                    summ += f" Договор № {r['contractNumber']}" + (f" от {r['contractDate']}." if r.get("contractDate") else ".")
+                rec = {"site": site["name"], "title": f"{buyer.title()}: {subject[:130]}", "url": url, "tag": "договор",
+                       "summary": summ, "topic": "обществени поръчки", "urgent": False, "published": pub,
+                       "events": [], "found": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+                news.append(rec)
+                have.add(url)
+                added += 1
+    print(f"[{site['name']}] прегледани {scanned} записа, нови договори на общините: {added}, без посочена стойност: {noval}")
+    return added
 
 
 def run(sites):
@@ -404,6 +506,13 @@ def run(sites):
     stats = {"ok": 0, "new": 0}
     for site in sites:
         name = site["name"]
+        if site.get("type") == "eop":
+            try:
+                stats["new"] += eop_run(site, news, have)
+                stats["ok"] += 1
+            except Exception as e:
+                print(f"[{name}] грешка: {e}")
+            continue
         try:
             items = find_items(site)
         except Exception as e:

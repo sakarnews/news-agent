@@ -103,5 +103,28 @@
    "https://galabovo.bg/polezna-informaciya/targove-i-konkursi/",
    "https://galabovo.bg/obshtinski-savet/novini/"
   ]
+ },
+ {
+  "name": "Община Маджарово",
+  "url": "https://www.madzharovo.bg/new/main.php"
+ },
+ {
+  "name": "ЕОП – договори на общините",
+  "type": "eop",
+  "url": "https://app.eop.bg/today/reporting/open-data",
+  "municipalities": [
+   "Хасково",
+   "Димитровград",
+   "Минерални бани",
+   "Стамболово",
+   "Маджарово",
+   "Любимец",
+   "Свиленград",
+   "Харманли",
+   "Тополовград",
+   "Ивайловград",
+   "Симеоновград"
+  ],
+  "max_value": 100000
  }
 ]
