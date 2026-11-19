@@ -472,7 +472,49 @@ def run(sites):
                 "sources_total": len(sites), "sources_ok": stats["ok"], "new": stats["new"]})
 
 
+def eop_probe():
+    """Само разузнаване: показва как изглеждат отворените данни на ЕОП (без разход на кредити)."""
+    from datetime import date as _d
+    base = "https://storage.eop.bg/open-data-{}/"
+    for back in (1, 2, 3):
+        day = (_d.today() - timedelta(days=back)).isoformat()
+        url = base.format(day)
+        print(f"== {url}")
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=40)
+            print("статус", r.status_code, r.headers.get("content-type"), "размер", len(r.content))
+            print(r.text[:1500].replace("\n", " "))
+            files = re.findall(r"<Key>([^<]+)</Key>", r.text) or re.findall(r'href="([^"]+\.(?:json|zip|gz))"', r.text)
+            print("файлове:", len(files), files[:8])
+            for f in files[:1]:
+                fu = f if f.startswith("http") else url + f.lstrip("/")
+                fr = requests.get(fu, headers=HEADERS, timeout=90)
+                print("файл", fu, fr.status_code, len(fr.content))
+                body = fr.content
+                if fu.endswith(".gz"):
+                    import gzip
+                    body = gzip.decompress(body)
+                elif fu.endswith(".zip"):
+                    import zipfile
+                    z = zipfile.ZipFile(io.BytesIO(body))
+                    print("в архива:", z.namelist()[:5])
+                    body = z.read(z.namelist()[0])
+                try:
+                    data = json.loads(body)
+                    print("тип", type(data).__name__, "ключове", list(data)[:12] if isinstance(data, dict) else len(data))
+                    rel = (data.get("releases") or data.get("records") or [data])[0] if isinstance(data, dict) else data[0]
+                    print(json.dumps(rel, ensure_ascii=False)[:3500])
+                except Exception as e:
+                    print("не е JSON:", e, body[:500])
+            break
+        except Exception as e:
+            print("грешка:", e)
+
+
 if __name__ == "__main__":
     with open(SITES, encoding="utf-8") as f:
         _sites = json.load(f)
-    run_test(_sites) if "--test" in sys.argv else run(_sites)
+    if "--eop-probe" in sys.argv:
+        eop_probe()
+    else:
+        run_test(_sites) if "--test" in sys.argv else run(_sites)
