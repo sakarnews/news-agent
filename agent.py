@@ -467,7 +467,16 @@ def eop_run(site, news, have):
                     continue
                 noval += val is None
                 uid = "|".join(str(r.get(k, "")) for k in ("noticeId", "lotIdentifier", "contractNumber"))
-                url = (r.get("linkToOjEu") or EOP_SEARCH) + "#" + quote(uid)
+                old = (r.get("linkToOjEu") or EOP_SEARCH) + "#" + quote(uid)  # предишен вид на адреса
+                tid = r.get("tenderId")
+                url = (f"https://app.eop.bg/today/{tid}" if tid else EOP_SEARCH) + "#" + quote(uid)
+                if old in have and old != url:  # поправяме адреса на вече записан договор
+                    for n in news:
+                        if n["url"] == old:
+                            n["url"] = url
+                    have.discard(old)
+                    have.add(url)
+                    continue
                 if url in have:
                     continue
                 pub = str(r.get("publicationDate") or "")[:10] or day
