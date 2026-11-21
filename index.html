@@ -93,6 +93,10 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
 .td li input{margin-top:3px;flex:none;width:16px;height:16px}
 .td li span{flex:1;word-break:break-word}.td li.done span{text-decoration:line-through;color:var(--mu)}
 .td li button{border:0;background:none;color:var(--mu);font-size:16px;cursor:pointer;padding:0 4px;line-height:1}
+.td .dtrow{display:flex;align-items:center;gap:8px;margin:-2px 0 8px;font-size:13px;color:var(--mu)}.td .dtrow input{height:30px;border:1px solid var(--line);border-radius:8px;padding:0 6px;font:inherit;font-size:13px;background:#fff;color:var(--tx)}
+.td li .due{font-style:normal;font-size:12px;color:var(--mu);white-space:nowrap;margin-top:2px}.td li .due.over{color:var(--red);font-weight:700}
+.td textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:6px;font:inherit;font-size:12px;margin-top:8px;box-sizing:border-box}
+.td .arch{display:flex;gap:12px;flex-wrap:wrap}
 .td .clr{border:0;background:none;color:var(--mu);font-size:12px;margin-top:6px;cursor:pointer;text-decoration:underline;padding:0}
 [hidden]{display:none!important}
 @media(max-width:900px){.app{flex-direction:column}.side{width:auto;padding:18px}.nav{flex-direction:row;flex-wrap:wrap}.main{padding:20px 16px}.hero{padding:24px}.hero h1{font-size:30px}}
@@ -265,22 +269,43 @@ function renderCal(){
  $('cal').replaceChildren.apply($('cal'),kids.length?kids:[h('div',{className:'empty',textContent:'Още няма предстоящи събития. Те се появяват, когато агентът открие дати в нови публикации.'})])}
 function renderAll(){renderFeed();renderTopics();renderCal();renderMini()}
 
-var tasks=[];
-try{tasks=JSON.parse(localStorage.getItem('tasks')||'[]')}catch(e){}
-function saveTasks(){try{localStorage.setItem('tasks',JSON.stringify(tasks))}catch(e){}}
+var tasks={};
+try{var t2=JSON.parse(localStorage.getItem('tasks2')||'null');
+ if(t2)tasks=t2;else{var old=JSON.parse(localStorage.getItem('tasks')||'[]'),b=Date.now();
+  old.forEach(function(k,x){var id='o'+x+b.toString(36);tasks[id]={id:id,t:k.t,d:!!k.d,due:'',c:b-x,ts:b}})}}catch(e){}
+function saveTasks(){try{localStorage.setItem('tasks2',JSON.stringify(tasks))}catch(e){}}
+function dueFmt(d){return d?d.split('-').reverse().slice(0,2).join('.'):''}
 function renderTodo(){
- var inp=h('input',{type:'text',placeholder:'Нова задача...',maxLength:200}),add=h('button',{type:'submit',textContent:'+'}),f=h('form',{},[inp,add]);
- inp.setAttribute('aria-label','Нова задача');add.setAttribute('aria-label','Добави задача');
- f.onsubmit=function(e){e.preventDefault();var t=inp.value.trim();if(!t)return;tasks.unshift({t:t,d:false});saveTasks();renderTodo()};
- var ul=h('ul',{},tasks.map(function(k,i){
+ var today=sday(new Date());
+ var inp=h('input',{type:'text',placeholder:'Нова задача...',maxLength:200}),dt=h('input',{type:'date'}),add=h('button',{type:'submit',textContent:'+'});
+ inp.setAttribute('aria-label','Нова задача');dt.setAttribute('aria-label','Срок');add.setAttribute('aria-label','Добави задача');
+ var f=h('form',{},[inp,add]),f2=h('div',{className:'dtrow'},[h('span',{textContent:'Срок:'}),dt]);
+ f.onsubmit=function(e){e.preventDefault();var t=inp.value.trim();if(!t)return;var id='t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),n=Date.now();
+  tasks[id]={id:id,t:t,d:false,due:dt.value||'',c:n,ts:n};saveTasks();renderTodo()};
+ var list=Object.keys(tasks).map(function(k){return tasks[k]}).filter(function(k){return!k.x});
+ list.sort(function(a,b){if(a.d!==b.d)return a.d?1:-1;var x=a.due||'9999',y=b.due||'9999';return x<y?-1:x>y?1:(b.c||0)-(a.c||0)});
+ var ul=h('ul',{},list.map(function(k){
   var c=h('input',{type:'checkbox',checked:k.d});c.setAttribute('aria-label','Изпълнена');
-  c.onchange=function(){k.d=c.checked;tasks.sort(function(a,b){return a.d-b.d});saveTasks();renderTodo()};
+  c.onchange=function(){k.d=c.checked;k.ts=Date.now();saveTasks();renderTodo()};
   var x=h('button',{type:'button',textContent:'×'});x.setAttribute('aria-label','Изтрий задачата');
-  x.onclick=function(){tasks.splice(i,1);saveTasks();renderTodo()};
-  return h('li',{className:k.d?'done':''},[c,h('span',{textContent:k.t}),x])}));
- var kids=[h('h4',{textContent:'Задачи'}),f,ul];
- if(tasks.some(function(k){return k.d})){var cl=h('button',{type:'button',className:'clr',textContent:'Изчисти изпълнените'});cl.onclick=function(){tasks=tasks.filter(function(k){return!k.d});saveTasks();renderTodo()};kids.push(cl)}
- else if(!tasks.length)kids.push(h('div',{className:'hint',textContent:'Записвайте тук задачи. Пазят се в този браузър.'}));
+  x.onclick=function(){k.x=true;k.ts=Date.now();saveTasks();renderTodo()};
+  var over=!k.d&&k.due&&k.due<today;
+  return h('li',{className:k.d?'done':''},[c,h('span',{textContent:k.t}),k.due?h('em',{className:'due'+(over?' over':''),textContent:dueFmt(k.due)}):null,x])}));
+ var kids=[h('h4',{textContent:'Задачи'}),f,f2,ul];
+ if(list.some(function(k){return k.d})){var cl=h('button',{type:'button',className:'clr',textContent:'Изчисти изпълнените'});cl.onclick=function(){list.forEach(function(k){if(k.d){k.x=true;k.ts=Date.now()}});saveTasks();renderTodo()};kids.push(cl)}
+ else if(!list.length)kids.push(h('div',{className:'hint',textContent:'Записвайте тук задачи. Пазят се в този браузър.'}));
+ var ex=h('button',{type:'button',className:'clr',textContent:'Копирай (архив)'}),im=h('button',{type:'button',className:'clr',textContent:'Върни от архив'});
+ ex.onclick=function(){var o={};Object.keys(topics).forEach(function(k){o[k]={n:topics[k],on:true,ts:Date.now()}});
+  var txt=JSON.stringify({v:2,topics:o,tasks:tasks}),ok=function(){ex.textContent='✓ Копирано'};
+  try{navigator.clipboard.writeText(txt).then(ok,function(){window.prompt('Копирайте:',txt)})}catch(e){window.prompt('Копирайте:',txt)}};
+ im.onclick=function(){
+  var ta=h('textarea',{rows:5,placeholder:'Поставете архива (текст, започващ с {"v":2) тук...'}),go=h('button',{type:'button',className:'clr',textContent:'Върни'}),msg=h('div',{className:'hint'});
+  go.onclick=function(){try{var raw=ta.value,d=JSON.parse(raw.slice(raw.indexOf('{'),raw.lastIndexOf('}')+1)),a=0;
+   Object.keys(d.tasks||{}).forEach(function(k){var r=d.tasks[k],l=tasks[k];if(!l||(r.ts||0)>(l.ts||0)){tasks[k]=r;a++}});
+   Object.keys(d.topics||{}).forEach(function(u){var r=d.topics[u];if(r.on)topics[u]=r.n;else delete topics[u]});
+   saveTasks();saveTopics();renderAll();renderTodo()}catch(e){msg.textContent='Не се разбира този текст. Копирайте целия архив.'}};
+  $('todo').append(ta,go,msg)};
+ kids.push(h('div',{className:'arch'},[ex,im]));
  $('todo').replaceChildren.apply($('todo'),kids)}
 function getJSON(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)throw 0;return r.json()})}
 buildNav();show('dash');renderTodo();
