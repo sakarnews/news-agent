@@ -94,6 +94,17 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
 .td li span{flex:1;word-break:break-word}.td li.done span{text-decoration:line-through;color:var(--mu)}
 .td li button{border:0;background:none;color:var(--mu);font-size:16px;cursor:pointer;padding:0 4px;line-height:1}
 .td .clr{border:0;background:none;color:var(--mu);font-size:12px;margin-top:6px;cursor:pointer;text-decoration:underline;padding:0}
+.td input[type=password]{flex:1;min-width:0;height:36px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font:inherit;font-size:14px;background:#fff;color:var(--tx)}
+.td form.tf{flex-direction:column}.td form.tf>input[type=text]{flex:none}
+.tf .row{display:flex;gap:6px;align-items:center}
+.tf .dl{font-size:13px;color:var(--mu);flex:none}
+.tf .row input[type=date]{flex:1;min-width:0;height:36px;border:1px solid var(--line);border-radius:8px;padding:0 6px;font:inherit;font-size:14px;background:#fff;color:var(--tx)}
+.td li .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.td .dueb{align-self:flex-start;border:0;background:none;padding:0;font-size:12px;color:var(--mu);cursor:pointer;text-decoration:underline dotted;line-height:1.3}
+.td li input[type=date]{width:150px;height:28px;margin:0;font:inherit;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:0 4px;background:#fff;color:var(--tx)}
+.td li.late span,.td li.late .dueb{color:var(--red);font-weight:700}
+.syn{font-size:13px;color:var(--green)}.syn.err{color:var(--red)}
+.td .lnk{display:flex;gap:14px;flex-wrap:wrap}
 [hidden]{display:none!important}
 @media(max-width:900px){.app{flex-direction:column}.side{width:auto;padding:18px}.nav{flex-direction:row;flex-wrap:wrap}.main{padding:20px 16px}.hero{padding:24px}.hero h1{font-size:30px}}
 </style>
@@ -105,6 +116,7 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
  <nav class="nav" id="nav"></nav>
  <div class="mc" id="minical" aria-label="Календар на месеца"></div>
  <div class="mc td" id="todo" aria-label="Задачи"></div>
+ <div class="mc td" id="sync" aria-label="Синхронизация между устройствата"></div>
 </aside>
 <main class="main">
 
@@ -142,7 +154,7 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
 
 <section id="v-topics" class="card page" hidden>
  <h1>Журналистически теми</h1>
- <p class="note">Публикациите, които сте отбелязали като интересни. Пазят се в този браузър, на това устройство.</p>
+ <p class="note">Публикациите, които сте отбелязали като интересни. Когато синхронизацията е включена, са едни и същи на всички устройства.</p>
  <div id="topics"></div>
 </section>
 
@@ -171,12 +183,10 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
 </main>
 </div>
 <script>
-var news=[],meta=null,sites=[],topics={},expanded=false,LIMIT=5;
-try{topics=JSON.parse(localStorage.getItem('topics')||'{}')}catch(e){}
+var news=[],meta=null,sites=[],topics={},tasks=[],expanded=false,LIMIT=5;
 var $=function(i){return document.getElementById(i)};
 function h(t,a,k){var e=document.createElement(t);for(var x in(a||{}))e[x]=a[x];(k||[]).forEach(function(c){if(c!=null)e.append(c)});return e}
 function safe(u){return /^https?:\/\//.test(u)?u:'#'}
-function saveTopics(){try{localStorage.setItem('topics',JSON.stringify(topics))}catch(e){}}
 function ldate(n){var d=n.published||n.found.slice(0,10);return d.split('-').reverse().join('.')}
 function skey(n){return (n.published||n.found.slice(0,10))+n.found}
 function sofia(d,o){return new Intl.DateTimeFormat('bg-BG',Object.assign({timeZone:'Europe/Sofia'},o)).format(d)}
@@ -197,7 +207,7 @@ function card(n,inTopics){
  var on=!!topics[n.url];
  var star=h('button',{type:'button',className:'star'+(on?' on':''),textContent:on?'★ В журналистически теми':'☆ Интересна тема'});
  star.setAttribute('aria-pressed',on?'true':'false');
- star.onclick=function(){if(topics[n.url])delete topics[n.url];else topics[n.url]=n;saveTopics();renderAll()};
+ star.onclick=function(){setTopic(n,!topics[n.url])};
  var acts=[star];
  if(n.topic&&!inTopics){var t=h('button',{type:'button',className:'tag',textContent:'# '+n.topic});t.onclick=function(){$('fp').value=n.topic;renderFeed()};acts.push(t)}
  if(on){var dr=h('button',{type:'button',className:'star',textContent:'✍ Чернова'});
@@ -275,22 +285,133 @@ function renderCal(){
  $('cal').replaceChildren.apply($('cal'),kids.length?kids:[h('div',{className:'empty',textContent:'Още няма предстоящи събития. Те се появяват, когато агентът открие дати в нови публикации.'})])}
 function renderAll(){renderFeed();renderTopics();renderCal();renderMini()}
 
-var tasks=[];
-try{tasks=JSON.parse(localStorage.getItem('tasks')||'[]')}catch(e){}
-function saveTasks(){try{localStorage.setItem('tasks',JSON.stringify(tasks))}catch(e){}}
+/* ---------- Общи данни: задачи и журналистически теми ----------
+   Пазят се в data/state.json в клон „tablo-danni“ на хранилището (не в main,
+   за да не пречат на агента и да не пускат ново публикуване на сайта).
+   Всяко устройство пази и копие при себе си, за да работи и без връзка. */
+var GH={owner:'sakarnews',repo:'news-agent',branch:'tablo-danni',path:'data/state.json'};
+var API='https://api.github.com/repos/'+GH.owner+'/'+GH.repo;
+var st={v:2,topics:{},tasks:{}};
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function lsDel(k){try{localStorage.removeItem(k)}catch(e){}}
+function now(){return Date.now()}
+function uid(){return now().toString(36)+Math.random().toString(36).slice(2,8)}
+function hs(s){var x=0;for(var i=0;i<s.length;i++)x=(x*31+s.charCodeAt(i))|0;return(x>>>0).toString(36)}
+var dirty=lsGet('state_dirty')==='1',ver=0,pt=null,syncing=false,again=false,lastSync=null,syncErr='';
+(function(){
+ var raw=lsGet('state_v2');
+ if(raw){try{var p=JSON.parse(raw);if(p&&p.topics&&p.tasks)st=p}catch(e){}}
+ if(lsGet('migrated_v2')==='1')return;
+ // Еднократно прехвърляне на старите записи от браузъра (старите ключове остават като резервно копие)
+ var ot={},ok=[],n=0;try{ot=JSON.parse(lsGet('topics')||'{}')||{}}catch(e){}try{ok=JSON.parse(lsGet('tasks')||'[]')||[]}catch(e){}
+ Object.keys(ot).forEach(function(u){if(!st.topics[u]){st.topics[u]={n:ot[u],on:true,ts:1};n++}});
+ ok.forEach(function(k,i){if(!k||!k.t)return;var id='m'+hs(k.t);if(!st.tasks[id]){st.tasks[id]={id:id,t:k.t,d:!!k.d,due:'',c:now()-i*1000,ts:1};n++}});
+ if(n){dirty=true;lsSet('state_dirty','1')}
+ lsSet('state_v2',JSON.stringify(st));lsSet('migrated_v2','1');
+})();
+function persist(){lsSet('state_v2',JSON.stringify(st))}
+function derive(){
+ topics={};Object.keys(st.topics).forEach(function(u){var x=st.topics[u];if(x.on&&x.n)topics[u]=x.n});
+ tasks=Object.keys(st.tasks).map(function(k){return st.tasks[k]}).filter(function(k){return!k.del&&k.t});
+ tasks.sort(function(a,b){
+  if(a.d!==b.d)return a.d?1:-1;
+  if(a.d)return b.ts-a.ts;
+  if(a.due&&b.due&&a.due!==b.due)return a.due<b.due?-1:1;
+  if(!!a.due!==!!b.due)return a.due?-1:1;
+  return(b.c||0)-(a.c||0)})}
+function mergeMap(a,b,cut){var r={};[a||{},b||{}].forEach(function(m){Object.keys(m).forEach(function(k){var x=m[k];if(!x)return;if(!r[k]||(x.ts||0)>(r[k].ts||0))r[k]=x})});
+ Object.keys(r).forEach(function(k){var x=r[k];if((x.del||x.on===false)&&x.ts<cut)delete r[k]});return r}
+function merge(a,b){var cut=now()-90*864e5;b=b||{};return{v:2,topics:mergeMap(a.topics,b.topics,cut),tasks:mergeMap(a.tasks,b.tasks,cut)}}
+function busy(){var a=document.activeElement;return a&&(($('todo').contains(a)&&a.tagName==='INPUT')||$('sync').contains(a))}
+function refresh(){derive();renderAll();if(!busy())renderTodo()}
+function changed(){ver++;dirty=true;lsSet('state_dirty','1');persist();derive();renderAll();renderTodo();
+ if(tok()){clearTimeout(pt);pt=setTimeout(sync,700)}else renderSync()}
+function setTopic(n,on){st.topics[n.url]={n:on?n:null,on:on,ts:now()};changed()}
+function upd(k,p){var o=st.tasks[k.id];if(!o)return;if(p.del)st.tasks[k.id]={id:k.id,del:true,ts:now()};else{Object.assign(o,p);o.ts=now()}changed()}
+
+/* ---------- Връзка с GitHub ---------- */
+function tok(){return lsGet('gh_token')}
+function gh(path,opt){opt=opt||{};opt.cache='no-store';opt.headers={'Authorization':'Bearer '+tok(),'Accept':'application/vnd.github+json'};return fetch(API+path,opt)}
+function dec(b){var s=atob(b.replace(/\s/g,'')),u=new Uint8Array(s.length);for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return new TextDecoder().decode(u)}
+function enc(t){var u=new TextEncoder().encode(t),s='',C=0x8000;for(var i=0;i<u.length;i+=C)s+=String.fromCharCode.apply(null,u.subarray(i,i+C));return btoa(s)}
+function Err(m){var e=new Error(m);return e}
+async function fetchRemote(){
+ var r=await gh('/contents/'+GH.path+'?ref='+GH.branch);
+ if(r.status===404)return{data:null,sha:null};
+ if(r.status===401||r.status===403)throw Err('auth');
+ if(!r.ok)throw Err('net');
+ var j=await r.json();return{data:JSON.parse(dec(j.content)),sha:j.sha}}
+async function ensureBranch(){
+ var r=await gh('/git/ref/heads/'+GH.branch);if(r.ok)return;
+ if(r.status===401||r.status===403)throw Err('auth');
+ var repo=await(await gh('')).json(),base=await(await gh('/git/ref/heads/'+repo.default_branch)).json();
+ var c=await gh('/git/refs',{method:'POST',body:JSON.stringify({ref:'refs/heads/'+GH.branch,sha:base.object.sha})});
+ if(c.status===401||c.status===403)throw Err('auth');
+ if(!c.ok&&c.status!==422)throw Err('net')}
+async function sync(){
+ if(!tok()){renderSync();return}
+ if(syncing){again=true;return}
+ syncing=true;renderSync();
+ try{
+  for(var i=0;i<4;i++){
+   var rem=await fetchRemote(),before=JSON.stringify(st),m=merge(st,rem.data);
+   st=m;persist();if(JSON.stringify(st)!==before)refresh();
+   if(!dirty&&rem.sha)break;
+   if(!rem.sha)await ensureBranch();
+   var v0=ver,body={message:'Табло: задачи и журналистически теми',content:enc(JSON.stringify(st)),branch:GH.branch};
+   if(rem.sha)body.sha=rem.sha;
+   var p=await gh('/contents/'+GH.path,{method:'PUT',body:JSON.stringify(body)});
+   if(p.ok){if(ver===v0){dirty=false;lsSet('state_dirty','0')}break}
+   if(p.status===401||p.status===403)throw Err('auth');
+   if(p.status!==409&&p.status!==422)throw Err('net');
+  }
+  lastSync=new Date();syncErr='';
+ }catch(e){syncErr=e.message==='auth'?'Ключът не е валиден или няма право за запис. Въведете нов.':'Няма връзка с GitHub. Ще опитам пак след малко.'}
+ syncing=false;renderSync();
+ if(again){again=false;sync()}}
+function renderSync(){
+ var kids=[h('h4',{textContent:'Синхронизация'})];
+ if(!tok()||syncErr.indexOf('Ключът')===0){
+  kids.push(h('div',{className:'hint',style:'margin:0 0 8px',textContent:syncErr||'Изключена. Задачите и темите се виждат само на това устройство. Поставете ключа от GitHub, за да ги споделите.'}));
+  var inp=h('input',{type:'password',placeholder:'Ключ от GitHub',autocomplete:'off'}),f=h('form',{},[inp,h('button',{type:'submit',textContent:'OK'})]);
+  inp.setAttribute('aria-label','Ключ за достъп до GitHub');
+  f.onsubmit=function(e){e.preventDefault();var v=inp.value.trim();if(!v)return;lsSet('gh_token',v);syncErr='';sync()};
+  kids.push(f);
+ }else{
+  var line=syncing?'Синхронизира се…':syncErr?syncErr:lastSync?'✓ Синхронизирано в '+sofia(lastSync,{hour:'2-digit',minute:'2-digit',hour12:false})+' ч.':'Свързване…';
+  kids.push(h('div',{className:'syn'+(syncErr?' err':''),textContent:line}));
+  var a=h('button',{type:'button',className:'clr',textContent:'Обнови сега'});a.onclick=function(){sync()};
+  var b=h('button',{type:'button',className:'clr',textContent:'Изключи на това устройство'});b.onclick=function(){lsDel('gh_token');syncErr='';lastSync=null;renderSync()};
+  kids.push(h('div',{className:'lnk'},[a,b]));
+ }
+ $('sync').replaceChildren.apply($('sync'),kids)}
+setInterval(function(){if(!document.hidden&&tok())sync();if(!busy())renderTodo()},60000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&tok())sync()});
+
+/* ---------- Задачи със срок ---------- */
+function fmtD(d){return d.split('-').reverse().join('.')}
 function renderTodo(){
- var inp=h('input',{type:'text',placeholder:'Нова задача...',maxLength:200}),add=h('button',{type:'submit',textContent:'+'}),f=h('form',{},[inp,add]);
- inp.setAttribute('aria-label','Нова задача');add.setAttribute('aria-label','Добави задача');
- f.onsubmit=function(e){e.preventDefault();var t=inp.value.trim();if(!t)return;tasks.unshift({t:t,d:false});saveTasks();renderTodo()};
- var ul=h('ul',{},tasks.map(function(k,i){
+ var today=sday(new Date());
+ var inp=h('input',{type:'text',placeholder:'Нова задача...',maxLength:200}),due=h('input',{type:'date'}),add=h('button',{type:'submit',textContent:'+'});
+ var f=h('form',{className:'tf'},[inp,h('div',{className:'row'},[h('span',{className:'dl',textContent:'Срок до'}),due,add])]);
+ inp.setAttribute('aria-label','Нова задача');due.setAttribute('aria-label','Срок за изпълнение');add.setAttribute('aria-label','Добави задача');
+ f.onsubmit=function(e){e.preventDefault();var t=inp.value.trim();if(!t)return;var id=uid();st.tasks[id]={id:id,t:t,d:false,due:due.value||'',c:now(),ts:now()};inp.value='';inp.blur();changed()};
+ var ul=h('ul',{},tasks.map(function(k){
+  var late=!k.d&&k.due&&k.due<today;
   var c=h('input',{type:'checkbox',checked:k.d});c.setAttribute('aria-label','Изпълнена');
-  c.onchange=function(){k.d=c.checked;tasks.sort(function(a,b){return a.d-b.d});saveTasks();renderTodo()};
+  c.onchange=function(){upd(k,{d:c.checked})};
   var x=h('button',{type:'button',textContent:'×'});x.setAttribute('aria-label','Изтрий задачата');
-  x.onclick=function(){tasks.splice(i,1);saveTasks();renderTodo()};
-  return h('li',{className:k.d?'done':''},[c,h('span',{textContent:k.t}),x])}));
+  x.onclick=function(){upd(k,{del:true})};
+  var db=h('button',{type:'button',className:'dueb',textContent:k.due?(late?'Просрочена · срок '+fmtD(k.due):'до '+fmtD(k.due)):'+ срок'});
+  db.setAttribute('aria-label',k.due?'Промени срока':'Добави срок');
+  db.onclick=function(){var di=h('input',{type:'date',value:k.due||''});di.setAttribute('aria-label','Срок за изпълнение');
+   di.onchange=function(){upd(k,{due:di.value||''})};db.replaceWith(di);di.focus()};
+  return h('li',{className:(k.d?'done':'')+(late?' late':'')},[c,h('div',{className:'tx'},[h('span',{textContent:k.t}),db]),x])}));
  var kids=[h('h4',{textContent:'Задачи'}),f,ul];
- if(tasks.some(function(k){return k.d})){var cl=h('button',{type:'button',className:'clr',textContent:'Изчисти изпълнените'});cl.onclick=function(){tasks=tasks.filter(function(k){return!k.d});saveTasks();renderTodo()};kids.push(cl)}
- else if(!tasks.length)kids.push(h('div',{className:'hint',textContent:'Записвайте тук задачи. Пазят се в този браузър.'}));
+ if(tasks.some(function(k){return k.d})){var cl=h('button',{type:'button',className:'clr',textContent:'Изчисти изпълнените'});
+  cl.onclick=function(){tasks.forEach(function(k){if(k.d)st.tasks[k.id]={id:k.id,del:true,ts:now()}});changed()};kids.push(cl)}
+ else if(!tasks.length)kids.push(h('div',{className:'hint',textContent:'Записвайте тук задачи и по желание срок. Просрочените светят в червено.'}));
  $('todo').replaceChildren.apply($('todo'),kids)}
 function getJSON(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)throw 0;return r.json()})}
 ['Хасково','Димитровград','Минерални бани','Стамболово','Маджарово','Любимец','Свиленград','Харманли','Тополовград','Ивайловград','Симеоновград'].forEach(function(n){
@@ -301,7 +422,7 @@ function getJSON(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)thr
  function fallback(){var ok=false;try{var t=document.createElement('textarea');t.value=txt;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();ok=document.execCommand('copy');t.remove()}catch(e){}done(ok)}
  b.onclick=function(){try{navigator.clipboard.writeText(txt).then(function(){done(true)},fallback)}catch(e){fallback()}};
  $('eopchips').append(b)});
-buildNav();show('dash');renderTodo();
+buildNav();show('dash');derive();renderTodo();renderSync();sync();
 Promise.all([getJSON('news.json').catch(function(){return[]}),getJSON('meta.json').catch(function(){return null}),getJSON('sites.json').catch(function(){return[]})]).then(function(r){
  var lim=Date.now()-14*864e5;
  news=r[0].filter(function(n){return !(Date.parse(n.published||n.found)<lim)}).sort(function(a,b){return skey(b)<skey(a)?-1:1});
