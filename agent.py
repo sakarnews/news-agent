@@ -355,10 +355,11 @@ def due_slot():
     """За планирано пускане: номер на слот (ден + 10:00 или 18:00, българско време) или None."""
     from zoneinfo import ZoneInfo
     now = datetime.now(ZoneInfo("Europe/Sofia"))
-    if 10 <= now.hour < 14:
-        return f"{now.date()} 10:00"
-    if 18 <= now.hour < 22:
+    # Наваксване: ако слотът е пропуснат (GitHub закъснява), първото следващо пускане го изпълнява.
+    if now.hour >= 18:
         return f"{now.date()} 18:00"
+    if now.hour >= 10:
+        return f"{now.date()} 10:00"
     return None
 
 
