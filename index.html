@@ -152,16 +152,6 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
  <div id="cal"></div>
 </section>
 
-<section id="v-eop" class="card page" hidden>
- <h1>ЕОП – обществени поръчки</h1>
- <p class="note">Пряк път към търсенето в Електронните обществени поръчки. Агентът не чете ЕОП автоматично, защото платформата не позволява това. Отваряте търсенето и преглеждате ръчно.</p>
- <div><a class="eopbtn" href="https://app.eop.bg/today/reporting/search" target="_blank" rel="noopener">Отвори търсенето в ЕОП ↗</a></div>
- <h2 style="font-size:20px">Какво да търсите</h2>
- <ul class="eoplist"><li>Само договори със стойност над <b>50 000 €</b>.</li><li>Само последните 7 дни.</li><li>Възложители – общините по-долу. Натиснете името, за да го копирате, и го поставете в полето за възложител.</li></ul>
- <div class="chips" id="eopchips"></div>
- <div id="eopmsg" class="note" style="font-weight:600;min-height:1.4em"></div>
-</section>
-
 <section id="v-src" class="card page" hidden>
  <h1>Институции / източници</h1>
  <p class="note">Институциите, които агентът обхожда. Добавянето и редактирането от тази страница е следващата стъпка. Засега промените се правят чрез Claude.</p>
@@ -182,7 +172,7 @@ function skey(n){return (n.published||n.found.slice(0,10))+n.found}
 function sofia(d,o){return new Intl.DateTimeFormat('bg-BG',Object.assign({timeZone:'Europe/Sofia'},o)).format(d)}
 function sday(d){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Sofia'}).format(d)}
 
-var views=[['dash','Табло','M3 11l9-8 9 8M5 10v10h14V10'],['src','Институции / източници','M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6'],['cal','Календар','M4 6h16v14H4zM4 10h16M8 3v4M16 3v4'],['eop','ЕОП – поръчки','M4 4h16v16H4zM8 9h8M8 13h8M8 17h5'],['topics','Журналистически теми','M12 3l2.8 6 6.2.7-4.7 4.3 1.4 6.5L12 17.2 6.3 20.5l1.4-6.5L3 9.7 9.2 9z']];
+var views=[['dash','Табло','M3 11l9-8 9 8M5 10v10h14V10'],['src','Институции / източници','M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6'],['cal','Календар','M4 6h16v14H4zM4 10h16M8 3v4M16 3v4'],['topics','Журналистически теми','M12 3l2.8 6 6.2.7-4.7 4.3 1.4 6.5L12 17.2 6.3 20.5l1.4-6.5L3 9.7 9.2 9z']];
 function show(v){views.forEach(function(x){$('v-'+x[0]).hidden=x[0]!==v});
  Array.from($('nav').children).forEach(function(b,i){b.className=views[i][0]===v?'on':''});window.scrollTo(0,0)}
 function buildNav(){views.forEach(function(x){
@@ -293,14 +283,6 @@ function renderTodo(){
  else if(!tasks.length)kids.push(h('div',{className:'hint',textContent:'Записвайте тук задачи. Пазят се в този браузър.'}));
  $('todo').replaceChildren.apply($('todo'),kids)}
 function getJSON(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)throw 0;return r.json()})}
-['Хасково','Димитровград','Минерални бани','Стамболово','Маджарово','Любимец','Свиленград','Харманли','Тополовград','Ивайловград','Симеоновград'].forEach(function(n){
- var txt='Община '+n,b=h('button',{type:'button',textContent:n});
- function done(ok){b.textContent=ok?'✓ Копирано: '+txt:'Търсете: '+txt;b.style.background=ok?'#2F7D4F':'#fff';b.style.color=ok?'#fff':'';
-  $('eopmsg').textContent=ok?'Копирано „'+txt+'“. Поставете го в полето за възложител в ЕОП (Ctrl+V).':'Не се копира автоматично. Търсете ръчно: '+txt;
-  setTimeout(function(){b.textContent=n;b.style.background='';b.style.color=''},4000)}
- function fallback(){var ok=false;try{var t=document.createElement('textarea');t.value=txt;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();ok=document.execCommand('copy');t.remove()}catch(e){}done(ok)}
- b.onclick=function(){try{navigator.clipboard.writeText(txt).then(function(){done(true)},fallback)}catch(e){fallback()}};
- $('eopchips').append(b)});
 buildNav();show('dash');renderTodo();
 Promise.all([getJSON('news.json').catch(function(){return[]}),getJSON('meta.json').catch(function(){return null}),getJSON('sites.json').catch(function(){return[]})]).then(function(r){
  var lim=Date.now()-7*864e5;
