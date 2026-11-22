@@ -384,6 +384,19 @@ def save(path, data):
 
 def run_test(sites):
     for s in sites:
+        if s.get("type") == "acts":
+            munis = [m.casefold() for m in s.get("municipalities", [])]
+            for kind, url in acts_pages(s):
+                try:
+                    rows = acts_rows(get(url).text, url)
+                    mine = [r for r in rows if acts_match(munis, r["plaintiff"] + " ; " + r["defendant"])]
+                    print(f"{'✓' if rows else '⚠'} {s['name']} – {kind}: със „Свали“ {len(rows)}, за нашите общини {len(mine)}")
+                    for r in mine[:5]:
+                        print(f"   - {r['date']} {r['num']}: {r['defendant'][:80]}")
+                except Exception as e:
+                    print(f"✗ {s['name']} – {kind}: грешка ({e})")
+            print()
+            continue
         if s.get("type") == "eop":
             try:
                 day = (datetime.now(timezone.utc).date() - timedelta(days=1)).isoformat()
@@ -510,6 +523,80 @@ def eop_run(site, news, have):
     return added
 
 
+def acts_match(munis, text):
+    """Дали страна по делото е община / общински съвет / кмет на община от списъка."""
+    t = re.sub(r"\s+", " ", text.casefold())
+    for m in munis:
+        if re.search(r"(общин\w*(\s+съвет)?|кмет\w*)\W{0,12}(?:на\W+)?(?:общин\w*\W+)?" + re.escape(m) + r"\b", t):
+            return m
+    return None
+
+
+def acts_rows(html_text, base):
+    """Редовете на таблицата със съдебни актове: само тези с бутон „Свали“."""
+    soup = BeautifulSoup(html_text, "html.parser")
+    out = []
+    for tr in soup.find_all("tr"):
+        cells = tr.find_all("td")
+        if len(cells) < 8:
+            continue
+        link = None
+        for a in tr.find_all("a", href=True):
+            if "getactpublicfile" in a["href"] or a.get_text(strip=True).casefold() == "свали":
+                link = urljoin(base, a["href"])
+                break
+        if not link:
+            continue
+        tx = [re.sub(r"\s+", " ", c.get_text(" ", strip=True)) for c in cells]
+        dm = next((re.search(r"\d{2}\.\d{2}\.\d{4}", x) for x in tx if re.search(r"^\d{2}\.\d{2}\.\d{4}$", x)), None)
+        if not dm:
+            continue
+        d, m, y = dm.group(0).split(".")
+        out.append({"kind": tx[6], "type": tx[1], "num": tx[2], "plaintiff": tx[3], "defendant": tx[4],
+                    "judge": tx[5], "date": f"{y}-{m}-{d}", "url": link})
+    return out
+
+
+def acts_pages(site, days=None):
+    """Адреси за заявките (по един за всеки вид акт) за последните дни."""
+    from zoneinfo import ZoneInfo
+    today = datetime.now(ZoneInfo("Europe/Sofia")).date()
+    frm = (today - timedelta(days=days or MAX_AGE_DAYS)).strftime("%d.%m.%Y")
+    to = today.strftime("%d.%m.%Y")
+    for code, kind in site.get("act_kinds", {}).items():
+        yield kind, f"{site['url']}?from={frm}&to={to}&actkindcode={code}&casenumber=&caseyear=&casetype="
+
+
+def acts_run(site, news, have):
+    """Съдебни актове (определения/решения) със „Свали“, само по общините от списъка, за последната седмица."""
+    munis = [m.casefold() for m in site.get("municipalities", [])]
+    added = scanned = with_file = 0
+    for kind, url in acts_pages(site):
+        try:
+            rows = acts_rows(get(url).text, url)
+        except Exception as e:
+            print(f"[{site['name']}] {kind}: грешка ({e})")
+            continue
+        with_file += len(rows)
+        for r in rows:
+            scanned += 1
+            muni = acts_match(munis, r["plaintiff"] + " ; " + r["defendant"]) if munis else "-"
+            if not muni or r["url"] in have or age_days(r["date"]) > MAX_AGE_DAYS:
+                continue
+            tag = (r["kind"] or kind).lower()
+            parties = f"{r['plaintiff']} срещу {r['defendant']}"
+            summ = (f"{(r['kind'] or kind).capitalize()} по {r['type'].lower()} № {r['num']}: {parties}. "
+                    f"Съдия-докладчик: {r['judge']}. Актът е качен за сваляне.")
+            rec = {"site": site["name"], "title": f"{(r['kind'] or kind).capitalize()} по дело {r['num']}: {r['defendant'][:110]}",
+                   "url": r["url"], "tag": tag, "summary": summ, "topic": "съдебни актове", "urgent": False,
+                   "published": r["date"], "events": [], "found": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+            news.append(rec)
+            have.add(r["url"])
+            added += 1
+    print(f"[{site['name']}] редове със „Свали“: {with_file}, за нашите общини (нови): {added}")
+    return added
+
+
 def run(sites):
     import anthropic
     client = anthropic.Anthropic()
@@ -532,6 +619,13 @@ def run(sites):
     stats = {"ok": 0, "new": 0}
     for site in sites:
         name = site["name"]
+        if site.get("type") == "acts":
+            try:
+                stats["new"] += acts_run(site, news, have)
+                stats["ok"] += 1
+            except Exception as e:
+                print(f"[{name}] грешка: {e}")
+            continue
         if site.get("type") == "eop":
             try:
                 stats["new"] += eop_run(site, news, have)
