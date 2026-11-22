@@ -287,6 +287,7 @@ function mergeDoc(d){
  Object.keys(tasks).forEach(function(k){var r=rt[k];if(!r||(tasks[k].ts||0)>(r.ts||0))pushNeeded=true});
  Object.keys(rp).forEach(function(u){var r=rp[u],l=topics2[u];if(!l||(r.ts||0)>(l.ts||0)){topics2[u]=r;pulled=true}});
  Object.keys(topics2).forEach(function(u){var r=rp[u];if(!r||(topics2[u].ts||0)>(r.ts||0))pushNeeded=true});
+ if(dedupeTasks()){pulled=true;pushNeeded=true}
  if(pulled){saveTasks(true);saveTopics(true);if(typeof renderAll==='function')renderAll();var f=document.activeElement;if(!(f&&$('todo')&&$('todo').contains(f)))renderTodo()}
  return {pulled:pulled,pushNeeded:pushNeeded}}
 function syncUrl(){return 'https://api.github.com/repos/'+SYNC.repo+'/contents/'+SYNC.path}
@@ -322,9 +323,19 @@ function connectSync(){
  renderTodo();SYNC.run(true)}
 function disconnectSync(){try{localStorage.removeItem('ghtoken')}catch(e){}setMsg('');renderTodo()}
 var tasks={};
+function tkey(t){return String(t||'').trim().toLowerCase().replace(/\s+/g,' ')}
+function thash(t){var x=5381,k=tkey(t);for(var i=0;i<k.length;i++)x=((x<<5)+x+k.charCodeAt(i))|0;return 'm'+(x>>>0).toString(36)}
 try{var t2=JSON.parse(localStorage.getItem('tasks2')||'null');
- if(t2)tasks=t2;else{var old=JSON.parse(localStorage.getItem('tasks')||'[]'),b=Date.now();
-  old.forEach(function(k,x){var id='o'+x+b.toString(36);tasks[id]={id:id,t:k.t,d:!!k.d,due:'',c:b-x,ts:b}})}}catch(e){}
+ if(t2)tasks=t2;else{var old=JSON.parse(localStorage.getItem('tasks')||'[]');
+  old.forEach(function(k,x){var id=thash(k.t);if(!tasks[id])tasks[id]={id:id,t:k.t,d:!!k.d,due:'',c:1000+x,ts:1}});
+  localStorage.setItem('tasks2',JSON.stringify(tasks))}}catch(e){}
+function dedupeTasks(){
+ var g={},ch=false;
+ Object.keys(tasks).forEach(function(k){var t=tasks[k];if(t.x)return;(g[tkey(t.t)]=g[tkey(t.t)]||[]).push(t)});
+ Object.keys(g).forEach(function(k){var a=g[k];if(a.length<2)return;
+  a.sort(function(p,q){return (q.due?1:0)-(p.due?1:0)||(p.d?1:0)-(q.d?1:0)||(q.ts||0)-(p.ts||0)});
+  for(var i=1;i<a.length;i++){a[i].x=true;a[i].ts=Date.now();ch=true}});
+ return ch}
 function saveTasks(quiet){try{localStorage.setItem('tasks2',JSON.stringify(tasks))}catch(e){}if(!quiet)SYNC.push()}
 function dueFmt(d){return d?d.split('-').reverse().slice(0,2).join('.'):''}
 function renderTodo(){
@@ -361,6 +372,7 @@ function renderTodo(){
  sb.onclick=ghTok()?disconnectSync:connectSync;kids.push(sm,sb);
  $('todo').replaceChildren.apply($('todo'),kids)}
 function getJSON(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)throw 0;return r.json()})}
+if(dedupeTasks())saveTasks(true);
 buildNav();show('dash');renderTodo();SYNC.run(false);
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')SYNC.run(false)});
 setInterval(function(){if(document.visibilityState==='visible')SYNC.run(false)},120000);
