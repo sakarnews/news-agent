@@ -166,11 +166,16 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
 </div>
 <script>
 var news=[],meta=null,sites=[],topics={},expanded=false,LIMIT=5;
-try{topics=JSON.parse(localStorage.getItem('topics')||'{}')}catch(e){}
+var topics2={};
+try{topics2=JSON.parse(localStorage.getItem('topics2')||'null')||{}}catch(e){}
+try{var tl=JSON.parse(localStorage.getItem('topics')||'{}');Object.keys(tl).forEach(function(u){if(!topics2[u])topics2[u]={n:tl[u],on:true,ts:1}})}catch(e){}
+function rebuildTopics(){topics={};Object.keys(topics2).forEach(function(u){if(topics2[u].on)topics[u]=topics2[u].n})}
+rebuildTopics();
 var $=function(i){return document.getElementById(i)};
 function h(t,a,k){var e=document.createElement(t);for(var x in(a||{}))e[x]=a[x];(k||[]).forEach(function(c){if(c!=null)e.append(c)});return e}
 function safe(u){return /^https?:\/\//.test(u)?u:'#'}
-function saveTopics(){try{localStorage.setItem('topics',JSON.stringify(topics))}catch(e){}}
+function saveTopics(quiet){try{localStorage.setItem('topics2',JSON.stringify(topics2))}catch(e){}rebuildTopics();if(!quiet)SYNC.push()}
+function setTopic(u,n,on){topics2[u]={n:n,on:on,ts:Date.now()};saveTopics()}
 function ldate(n){var d=n.published||n.found.slice(0,10);return d.split('-').reverse().join('.')}
 function skey(n){return (n.published||n.found.slice(0,10))+n.found}
 function sofia(d,o){return new Intl.DateTimeFormat('bg-BG',Object.assign({timeZone:'Europe/Sofia'},o)).format(d)}
@@ -191,7 +196,7 @@ function card(n,inTopics){
  var on=!!topics[n.url];
  var star=h('button',{type:'button',className:'star'+(on?' on':''),textContent:on?'★ В журналистически теми':'☆ Интересна тема'});
  star.setAttribute('aria-pressed',on?'true':'false');
- star.onclick=function(){if(topics[n.url])delete topics[n.url];else topics[n.url]=n;saveTopics();renderAll()};
+ star.onclick=function(){setTopic(n.url,n,!topics[n.url]);renderAll()};
  var acts=[star];
  if(n.topic&&!inTopics){var t=h('button',{type:'button',className:'tag',textContent:'# '+n.topic});t.onclick=function(){$('fp').value=n.topic;renderFeed()};acts.push(t)}
  if(on){var dr=h('button',{type:'button',className:'star',textContent:'✍ Чернова'});
@@ -269,11 +274,58 @@ function renderCal(){
  $('cal').replaceChildren.apply($('cal'),kids.length?kids:[h('div',{className:'empty',textContent:'Още няма предстоящи събития. Те се появяват, когато агентът открие дати в нови публикации.'})])}
 function renderAll(){renderFeed();renderTopics();renderCal();renderMini()}
 
+var SYNC={repo:'sakarnews/news-agent',branch:'tablo-danni',path:'sync/zadachi-i-temi.json',msg:'',timer:null,busy:false,again:false};
+function ghTok(){try{return localStorage.getItem('ghtoken')||''}catch(e){return ''}}
+function b64e(x){return btoa(unescape(encodeURIComponent(x)))}
+function b64d(x){return decodeURIComponent(escape(atob(x.replace(/\s/g,''))))}
+function hhmm(){return new Intl.DateTimeFormat('bg-BG',{timeZone:'Europe/Sofia',hour:'2-digit',minute:'2-digit'}).format(new Date())}
+function mergeDoc(d){
+ var pulled=false,pushNeeded=false;
+ d=d||{};
+ var rt=d.tasks||{},rp=d.topics||{};
+ Object.keys(rt).forEach(function(k){var r=rt[k],l=tasks[k];if(!l||(r.ts||0)>(l.ts||0)){tasks[k]=r;pulled=true}});
+ Object.keys(tasks).forEach(function(k){var r=rt[k];if(!r||(tasks[k].ts||0)>(r.ts||0))pushNeeded=true});
+ Object.keys(rp).forEach(function(u){var r=rp[u],l=topics2[u];if(!l||(r.ts||0)>(l.ts||0)){topics2[u]=r;pulled=true}});
+ Object.keys(topics2).forEach(function(u){var r=rp[u];if(!r||(topics2[u].ts||0)>(r.ts||0))pushNeeded=true});
+ if(pulled){saveTasks(true);saveTopics(true);if(typeof renderAll==='function')renderAll();var f=document.activeElement;if(!(f&&$('todo')&&$('todo').contains(f)))renderTodo()}
+ return {pulled:pulled,pushNeeded:pushNeeded}}
+function syncUrl(){return 'https://api.github.com/repos/'+SYNC.repo+'/contents/'+SYNC.path}
+function setMsg(t){SYNC.msg=t;var e=document.getElementById('syncmsg');if(e)e.textContent=t}
+SYNC.push=function(){clearTimeout(SYNC.timer);SYNC.timer=setTimeout(function(){SYNC.run(true)},1500)};
+SYNC.run=async function(force,retry){
+ if(SYNC.busy){SYNC.again=true;return}
+ SYNC.busy=true;
+ try{
+  var tok=ghTok(),doc=null,sha=null;
+  if(!tok){
+   var r0=await fetch('https://raw.githubusercontent.com/'+SYNC.repo+'/'+SYNC.branch+'/'+SYNC.path+'?t='+Date.now());
+   if(r0.ok)mergeDoc(await r0.json());
+   setMsg('Само четене. За запис свържете синхронизацията.');return}
+  var r=await fetch(syncUrl()+'?ref='+SYNC.branch+'&t='+Date.now(),{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+tok}});
+  if(r.status===401||r.status===403){setMsg('Ключът не е приет. Свържете отново.');return}
+  if(r.status===200){var j=await r.json();sha=j.sha;doc=JSON.parse(b64d(j.content))}
+  else if(r.status!==404){setMsg('Грешка при четене ('+r.status+')');return}
+  var m=mergeDoc(doc||{});
+  if(force||m.pushNeeded||!doc){
+   var body={message:'Табло: задачи и журналистически теми',content:b64e(JSON.stringify({v:2,topics:topics2,tasks:tasks})),branch:SYNC.branch};
+   if(sha)body.sha=sha;
+   var w=await fetch(syncUrl(),{method:'PUT',headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify(body)});
+   if(w.status===409||w.status===422){if(!retry){SYNC.busy=false;return SYNC.run(true,true)}setMsg('Конфликт, опитайте пак');return}
+   if(!w.ok){setMsg('Грешка при запис ('+w.status+')');return}}
+  setMsg('Синхронизирано в '+hhmm())
+ }catch(e){setMsg('Няма връзка. Данните са запазени в този браузър.')}
+ finally{SYNC.busy=false;if(SYNC.again){SYNC.again=false;SYNC.push()}}};
+function connectSync(){
+ var t=window.prompt('Поставете ключа от GitHub (започва с github_pat_). Той се пази само в този браузър.');
+ if(!t)return;t=t.trim();
+ try{localStorage.setItem('ghtoken',t)}catch(e){}
+ renderTodo();SYNC.run(true)}
+function disconnectSync(){try{localStorage.removeItem('ghtoken')}catch(e){}setMsg('');renderTodo()}
 var tasks={};
 try{var t2=JSON.parse(localStorage.getItem('tasks2')||'null');
  if(t2)tasks=t2;else{var old=JSON.parse(localStorage.getItem('tasks')||'[]'),b=Date.now();
   old.forEach(function(k,x){var id='o'+x+b.toString(36);tasks[id]={id:id,t:k.t,d:!!k.d,due:'',c:b-x,ts:b}})}}catch(e){}
-function saveTasks(){try{localStorage.setItem('tasks2',JSON.stringify(tasks))}catch(e){}}
+function saveTasks(quiet){try{localStorage.setItem('tasks2',JSON.stringify(tasks))}catch(e){}if(!quiet)SYNC.push()}
 function dueFmt(d){return d?d.split('-').reverse().slice(0,2).join('.'):''}
 function renderTodo(){
  var today=sday(new Date());
@@ -295,20 +347,23 @@ function renderTodo(){
  if(list.some(function(k){return k.d})){var cl=h('button',{type:'button',className:'clr',textContent:'Изчисти изпълнените'});cl.onclick=function(){list.forEach(function(k){if(k.d){k.x=true;k.ts=Date.now()}});saveTasks();renderTodo()};kids.push(cl)}
  else if(!list.length)kids.push(h('div',{className:'hint',textContent:'Записвайте тук задачи. Пазят се в този браузър.'}));
  var ex=h('button',{type:'button',className:'clr',textContent:'Копирай (архив)'}),im=h('button',{type:'button',className:'clr',textContent:'Върни от архив'});
- ex.onclick=function(){var o={};Object.keys(topics).forEach(function(k){o[k]={n:topics[k],on:true,ts:Date.now()}});
-  var txt=JSON.stringify({v:2,topics:o,tasks:tasks}),ok=function(){ex.textContent='✓ Копирано'};
+ ex.onclick=function(){
+  var txt=JSON.stringify({v:2,topics:topics2,tasks:tasks}),ok=function(){ex.textContent='✓ Копирано'};
   try{navigator.clipboard.writeText(txt).then(ok,function(){window.prompt('Копирайте:',txt)})}catch(e){window.prompt('Копирайте:',txt)}};
  im.onclick=function(){
   var ta=h('textarea',{rows:5,placeholder:'Поставете архива (текст, започващ с {"v":2) тук...'}),go=h('button',{type:'button',className:'clr',textContent:'Върни'}),msg=h('div',{className:'hint'});
   go.onclick=function(){try{var raw=ta.value,d=JSON.parse(raw.slice(raw.indexOf('{'),raw.lastIndexOf('}')+1)),a=0;
-   Object.keys(d.tasks||{}).forEach(function(k){var r=d.tasks[k],l=tasks[k];if(!l||(r.ts||0)>(l.ts||0)){tasks[k]=r;a++}});
-   Object.keys(d.topics||{}).forEach(function(u){var r=d.topics[u];if(r.on)topics[u]=r.n;else delete topics[u]});
+   mergeDoc(d);
    saveTasks();saveTopics();renderAll();renderTodo()}catch(e){msg.textContent='Не се разбира този текст. Копирайте целия архив.'}};
   $('todo').append(ta,go,msg)};
  kids.push(h('div',{className:'arch'},[ex,im]));
+ var sm=h('div',{className:'hint',id:'syncmsg',textContent:SYNC.msg||(ghTok()?'Синхронизация…':'Не е свързано със синхронизация.')}),sb=h('button',{type:'button',className:'clr',textContent:ghTok()?'Прекъсни синхронизацията':'Свържи синхронизация'});
+ sb.onclick=ghTok()?disconnectSync:connectSync;kids.push(sm,sb);
  $('todo').replaceChildren.apply($('todo'),kids)}
 function getJSON(u){return fetch(u+'?'+Date.now()).then(function(r){if(!r.ok)throw 0;return r.json()})}
-buildNav();show('dash');renderTodo();
+buildNav();show('dash');renderTodo();SYNC.run(false);
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')SYNC.run(false)});
+setInterval(function(){if(document.visibilityState==='visible')SYNC.run(false)},120000);
 Promise.all([getJSON('news.json').catch(function(){return[]}),getJSON('meta.json').catch(function(){return null}),getJSON('sites.json').catch(function(){return[]})]).then(function(r){
  var lim=Date.now()-7*864e5;
  news=r[0].filter(function(n){return !(Date.parse(n.published||n.found)<lim)}).sort(function(a,b){return skey(b)<skey(a)?-1:1});
