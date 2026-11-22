@@ -344,6 +344,13 @@ def is_recent(published):
         return True
 
 
+def is_excluded(site, *texts):
+    """Материали, съдържащи думи от списъка „exclude“ на сайта (напр. други области), се пропускат."""
+    words = (site or {}).get("exclude") or []
+    hay = re.sub(r"\s+", " ", " ".join(t or "" for t in texts)).casefold()
+    return any(w.casefold() in hay for w in words)
+
+
 def kw_match(keywords, *texts):
     """True, ако някоя ключова дума се среща в текстовете (без значение от регистър и тирета)."""
     norm = lambda t: re.sub(r"[\s\-–„“\"']+", " ", t or "").casefold()
@@ -507,6 +514,11 @@ def run(sites):
     import anthropic
     client = anthropic.Anthropic()
     state, news = load(SEEN, {}), load(NEWS, [])
+    by_name = {x["name"]: x for x in sites}
+    before = len(news)
+    news = [n for n in news if not is_excluded(by_name.get(n.get("site")), n.get("title"), n.get("summary"))]
+    if len(news) != before:
+        print(f"Премахнати вече записани публикации по списъка за изключване: {before - len(news)}")
     if os.environ.get("GITHUB_EVENT_NAME") == "schedule":
         slot = due_slot()
         if not slot or state.get("_slot") == slot:
@@ -546,7 +558,7 @@ def run(sites):
         else:
             batch = [i for i in items if i["url"] not in set(seen)][:site.get("max_new", MAX_NEW)]
         print(f"[{name}] намерени {len(items)}, за обработка: {len(batch)}")
-        skip = {"без дата": 0, "стари": 0, "ключови думи": 0, "нерелевантни": 0}
+        skip = {"без дата": 0, "стари": 0, "ключови думи": 0, "изключени": 0, "нерелевантни": 0}
         old_examples = []
         for item in reversed(batch):
             if item["url"] in have:
@@ -560,13 +572,17 @@ def run(sites):
                     if pub and len(old_examples) < 3:
                         old_examples.append(f"{pub} {item['url']}")
                     continue
+                if is_excluded(site, item["title"], art["text"][:1500]):
+                    seen.append(item["url"])  # друга област или тема, която не ни интересува
+                    skip["изключени"] += 1
+                    continue
                 if site.get("keywords") and not kw_match(site["keywords"], item["title"], art["text"]):
                     seen.append(item["url"])  # не съдържа нужните ключови думи
                     skip["ключови думи"] += 1
                     continue
                 res = analyze(client, name, item["title"], art["text"], site.get("rule", ""))
                 seen.append(item["url"])
-                if not res.get("relevant", True):
+                if not res.get("relevant", True) or is_excluded(site, res.get("summary")):
                     skip["нерелевантни"] += 1
                     continue
                 rec = {"site": name, "title": item["title"], "url": item["url"],

@@ -133,7 +133,7 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
    <div id="urg"></div>
    <div id="list"><div class="item">Зареждане...</div></div>
   </div>
-  <aside class="card side2"><h2>Журналистически теми</h2><p>Тук се копират публикациите, отбелязани като интересни.</p><div id="mini"></div></aside>
+  <aside class="card side2"><h2>Журналистически теми</h2><p>Тук се копират публикациите, отбелязани като интересни. Стоят 7 дни, после изчезват.</p><div id="mini"></div></aside>
  </section>
  <section class="card team"><div style="flex:1 1 220px"><h2>Екипът на Сакарнюз</h2><small>Хората, които правят новините</small></div>
   <div class="people">
@@ -169,7 +169,14 @@ var news=[],meta=null,sites=[],topics={},expanded=false,LIMIT=5;
 var topics2={};
 try{topics2=JSON.parse(localStorage.getItem('topics2')||'null')||{}}catch(e){}
 try{var tl=JSON.parse(localStorage.getItem('topics')||'{}');Object.keys(tl).forEach(function(u){if(!topics2[u])topics2[u]={n:tl[u],on:true,ts:1}})}catch(e){}
-function rebuildTopics(){topics={};Object.keys(topics2).forEach(function(u){if(topics2[u].on)topics[u]=topics2[u].n})}
+var TOPIC_DAYS=7;
+function pruneTopics(){var ch=false,now=Date.now();
+ Object.keys(topics2).forEach(function(u){var t=topics2[u];
+  if(!(t.ts>1e12)){t.ts=now;ch=true}  // стар запис без дата: часовникът тръгва от сега
+  else if(now-t.ts>30*864e5){delete topics2[u];ch=true}});
+ return ch}
+function rebuildTopics(){topics={};var now=Date.now();Object.keys(topics2).forEach(function(u){var t=topics2[u];if(t.on&&now-t.ts<TOPIC_DAYS*864e5)topics[u]=t.n})}
+if(pruneTopics()){try{localStorage.setItem('topics2',JSON.stringify(topics2))}catch(e){}}
 rebuildTopics();
 var $=function(i){return document.getElementById(i)};
 function h(t,a,k){var e=document.createElement(t);for(var x in(a||{}))e[x]=a[x];(k||[]).forEach(function(c){if(c!=null)e.append(c)});return e}
@@ -288,6 +295,7 @@ function mergeDoc(d){
  Object.keys(rp).forEach(function(u){var r=rp[u],l=topics2[u];if(!l||(r.ts||0)>(l.ts||0)){topics2[u]=r;pulled=true}});
  Object.keys(topics2).forEach(function(u){var r=rp[u];if(!r||(topics2[u].ts||0)>(r.ts||0))pushNeeded=true});
  if(dedupeTasks()){pulled=true;pushNeeded=true}
+ if(pruneTopics()){pulled=true;pushNeeded=true}
  if(pulled){saveTasks(true);saveTopics(true);if(typeof renderAll==='function')renderAll();var f=document.activeElement;if(!(f&&$('todo')&&$('todo').contains(f)))renderTodo()}
  return {pulled:pulled,pushNeeded:pushNeeded}}
 function syncUrl(){return 'https://api.github.com/repos/'+SYNC.repo+'/contents/'+SYNC.path}
