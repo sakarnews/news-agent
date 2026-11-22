@@ -587,7 +587,7 @@ def acts_run(site, news, have):
             parties = f"{r['plaintiff']} срещу {r['defendant']}"
             summ = (f"{(r['kind'] or kind).capitalize()} по {r['type'].lower()} № {r['num']}: {parties}. "
                     f"Съдия-докладчик: {r['judge']}. Актът е качен за сваляне.")
-            rec = {"site": site["name"], "title": f"{(r['kind'] or kind).capitalize()} по дело {r['num']}: {r['defendant'][:110]}",
+            rec = {"site": site["name"], "title": f"{(r['kind'] or kind).capitalize()} по дело {r['num']}: {r['plaintiff'][:55]} срещу {r['defendant'][:70]}",
                    "url": r["url"], "tag": tag, "summary": summ, "topic": "съдебни актове", "urgent": False,
                    "published": r["date"], "events": [], "found": datetime.now(timezone.utc).isoformat(timespec="seconds")}
             news.append(rec)
