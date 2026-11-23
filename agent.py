@@ -359,14 +359,14 @@ def kw_match(keywords, *texts):
 
 
 def due_slot():
-    """За планирано пускане: номер на слот (ден + 10:00 или 18:00, българско време) или None."""
+    """За планирано пускане: номер на слот (ден + 11:00 или 18:00, българско време) или None."""
     from zoneinfo import ZoneInfo
     now = datetime.now(ZoneInfo("Europe/Sofia"))
     # Наваксване: ако слотът е пропуснат (GitHub закъснява), първото следващо пускане го изпълнява.
     if now.hour >= 18:
         return f"{now.date()} 18:00"
-    if now.hour >= 10:
-        return f"{now.date()} 10:00"
+    if now.hour >= 11:
+        return f"{now.date()} 11:00"
     return None
 
 
@@ -609,7 +609,7 @@ def run(sites):
     if os.environ.get("GITHUB_EVENT_NAME") == "schedule":
         slot = due_slot()
         if not slot or state.get("_slot") == slot:
-            print("Не е време за обхождане (10:00 или 18:00) или вече е направено. Край.")
+            print("Не е време за обхождане (11:00 или 18:00) или вече е направено. Край.")
             return
         state["_slot"] = slot
     backfill = not state.get("_v6")
