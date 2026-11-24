@@ -787,7 +787,7 @@ def run(sites, force_jobs=False):
         print(f"Премахнати вече записани публикации по списъка за изключване: {before - len(news)}")
     news = [n for n in news if n.get("tag") != "работни места"]  # старият обобщен запис вече не се ползва
     do_main = True
-    do_jobs = force_jobs or jobs_due(state)
+    do_jobs = any(x.get("type") == "jobs" for x in sites) and (force_jobs or jobs_due(state))
     if os.environ.get("GITHUB_EVENT_NAME") == "schedule":
         slot = due_slot()
         do_main = bool(slot) and state.get("_slot") != slot
