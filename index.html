@@ -100,7 +100,7 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
 .td .clr{border:0;background:none;color:var(--mu);font-size:12px;margin-top:6px;cursor:pointer;text-decoration:underline;padding:0}
 [hidden]{display:none!important}
 @media(max-width:900px){.app{flex-direction:column}.side{width:auto;padding:18px}.nav{flex-direction:row;flex-wrap:wrap}.main{padding:20px 16px}.hero{padding:24px}.hero h1{font-size:30px}}
-.jb{display:grid;grid-template-columns:minmax(170px,1.4fr) minmax(220px,3fr) 100px auto;gap:6px 16px;align-items:center;border-top:1px solid var(--line);padding:12px 0}
+.jb{display:grid;grid-template-columns:minmax(170px,1.4fr) minmax(220px,3fr) auto;gap:6px 16px;align-items:center;border-top:1px solid var(--line);padding:12px 0}
 .jb.hd{font-size:13px;color:var(--mu);border-top:0;padding:0 0 6px}.jb b{font-weight:600}.jb small{color:var(--mu)}
 .jb a.btn{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);color:#1d4ed8;text-decoration:none;font-size:14px;background:#fff}
 @media(max-width:900px){.jb{grid-template-columns:1fr auto}.jb.hd{display:none}}
@@ -152,6 +152,7 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
  <h1>Работни места</h1>
  <p class="note" id="jnote">Свободни работни места в област Хасково от последната седмица.</p>
  <div class="ctl"><input type="search" id="jq" placeholder="Търсене..." aria-label="Търсене"><select id="jk" aria-label="Кой предлага"><option value="">Всички</option></select></div>
+ <div><button type="button" class="star" id="jdraft">✍ Чернова</button></div>
  <div id="jobs"></div>
 </section>
 
@@ -254,20 +255,34 @@ function jobGroups(){
   add('Институция',n.site,n.position||n.title,n.url,'Източник: '+(hst||n.site))});
  return Object.keys(g).map(function(k){return g[k]}).sort(function(a,b){return b.n-a.n||(a.employer<b.employer?-1:1)})}
 function posText(o){var k=Object.keys(o.pos).sort(function(a,b){return o.pos[b]-o.pos[a]});
- var s=k.slice(0,6).map(function(p){return o.pos[p]>1?p+' – '+o.pos[p]:p}).join(', ');
- return k.length>6?s+' и още '+(k.length-6):s}
+ var s=k.slice(0,8).join(', ');
+ return k.length>8?s+' и още '+(k.length-8):s}
 function renderJobs(){
  var f=$('jq').value.trim().toLowerCase(),k=$('jk').value;
- var all=jobGroups(),total=all.reduce(function(s,x){return s+x.n},0);$('n-jobs').textContent=total||'';
+ var all=jobGroups();$('n-jobs').textContent='';
  var rows=all.filter(function(x){return(!k||x.kind==k)&&(!f||(x.employer+' '+posText(x)).toLowerCase().includes(f))});
- $('jnote').textContent='Свободни работни места в област Хасково от последната седмица: '+total+' обяви от '+all.length+' работодатели.'+(jobsData&&jobsData.updated?' Обявите от alo.bg са обновени '+ldate({published:jobsData.updated.slice(0,10)})+'.':'')+' Бутонът води към страницата, където са публикувани.';
- var head=h('div',{className:'jb hd'},[h('span',{textContent:'Предлага'}),h('span',{textContent:'Свободни позиции'}),h('span',{textContent:'Брой'}),h('span',{textContent:''})]);
+ $('jnote').textContent='Свободни работни места в област Хасково от последната седмица.'+(jobsData&&jobsData.updated?' Обявите от alo.bg са обновени '+ldate({published:jobsData.updated.slice(0,10)})+'.':'')+' Бутонът води към страницата, където са публикувани.';
+ var head=h('div',{className:'jb hd'},[h('span',{textContent:'Предлага'}),h('span',{textContent:'Свободни позиции'}),h('span',{textContent:''})]);
  var body=rows.map(function(x){
   return h('div',{className:'jb'},[h('div',{},[h('b',{textContent:x.employer}),h('br'),h('small',{textContent:x.kind})]),h('span',{textContent:posText(x)}),
-   h('b',{textContent:x.n+(x.n===1?' обява':' обяви')}),
    h('a',{className:'btn',href:safe(x.url),target:'_blank',rel:'noopener',textContent:x.label})])});
  $('jobs').replaceChildren.apply($('jobs'),rows.length?[head].concat(body):[h('div',{className:'empty',textContent:'Още няма обяви. Прегледът на alo.bg се прави в понеделник след 14:00; конкурсите на институциите се добавят при всяко обхождане.'})])}
 function fillJobFilters(){$('jk').replaceChildren(h('option',{value:'',textContent:'Всички'}));fill('jk',jobGroups().map(function(x){return x.kind}))}
+function jobsDraftText(){
+ var g=jobGroups();if(!g.length)return '';
+ var lines=g.map(function(x){var k=Object.keys(x.pos).sort(function(a,b){return x.pos[b]-x.pos[a]});
+  return '- '+x.employer+' ('+x.kind+', '+x.n+(x.n===1?' обява':' обяви')+'): '+k.map(function(p){return x.pos[p]>1?p+' ×'+x.pos[p]:p}).join(', ')});
+ var src=(jobsData&&jobsData.source)?jobsData.source:'alo.bg';
+ return 'Напиши чернова на материал за медията за свободните работни места в област Хасково през последната седмица (към '+sday(new Date()).split('-').reverse().join('.')+').\n'
+  +'Данни (работодател, вид, брой обяви, длъжности):\n'+lines.join('\n')+'\n'
+  +'Източници: '+src+' (обяви, включително на бюрата по труда) и сайтовете на институциите, които публикуват конкурси.\n'
+  +'Внимание: бройката е на обяви, не на свободни места – една обява може да е за повече от едно място.\n'
+  +'Канал: допиши сам (сайт / Facebook / видео / печатно издание). Ако не е написано, дай заглавие, лийд, основен текст за сайта, кратък пост за Facebook и идея за видео. '
+  +'Само факти от данните, без измислени цитати и числа.'}
+function setupJobsDraft(){var b=$('jdraft');b.onclick=function(){var t=jobsDraftText();
+  if(!t){b.textContent='Няма данни за чернова';setTimeout(function(){b.textContent='✍ Чернова'},3000);return}
+  var ok=function(){b.textContent='✓ Копирано, поставете в чата с Claude';setTimeout(function(){b.textContent='✍ Чернова'},5000)};
+  try{navigator.clipboard.writeText(t).then(ok,function(){window.prompt('Копирайте текста:',t)})}catch(e){window.prompt('Копирайте текста:',t)}}}
 function renderSources(){
  $('n-src').textContent=sites.length||'';
  $('srcs').replaceChildren.apply($('srcs'),sites.length?sites.map(function(s){var us=s.urls||[s.url];return h('div',{className:'src'},[h('b',{textContent:s.name})].concat(us.map(function(u){return h('a',{href:safe(u),target:'_blank',rel:'noopener',textContent:decodeURI(u)})})))}):[h('div',{className:'empty',textContent:'Списъкът не се зареди.'})])}
@@ -424,7 +439,7 @@ Promise.all([getJSON('news.json').catch(function(){return[]}),getJSON('meta.json
  var lim=Date.now()-7*864e5;
  news=r[0].filter(function(n){return !(Date.parse(n.published||n.found)<lim)}).sort(function(a,b){return skey(b)<skey(a)?-1:1});
  meta=r[1];sites=r[2];jobsData=r[3];
- fillJobFilters();['jq','jk'].forEach(function(i){$(i).oninput=renderJobs});renderJobs();
+ setupJobsDraft();fillJobFilters();['jq','jk'].forEach(function(i){$(i).oninput=renderJobs});renderJobs();
  fill('fs',news.map(function(n){return n.site}));fill('ft',news.map(function(n){return n.tag}));fill('fp',news.map(function(n){return n.topic}));
  ['q','fs','ft','fp'].forEach(function(i){$(i).oninput=function(){expanded=false;renderFeed()}});
  renderMeta();renderSources();renderAll();
