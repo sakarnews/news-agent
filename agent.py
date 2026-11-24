@@ -903,6 +903,33 @@ def run(sites, force_jobs=False):
                     "sources_total": len(sites), "sources_ok": stats["ok"], "new": stats["new"]})
 
 
+def robots_probe():
+    """Само проверка: какво казва robots.txt на сайтовете за работа (без запис и без кредити)."""
+    from urllib.robotparser import RobotFileParser
+    targets = {
+        "jobs.bg": ["https://www.jobs.bg/", "https://www.jobs.bg/front_job_search.php", "https://www.jobs.bg/jobs/haskovo"],
+        "zaplata.bg": ["https://www.zaplata.bg/", "https://www.zaplata.bg/obavi-za-rabota/", "https://www.zaplata.bg/bg/jobs/haskovo/"],
+    }
+    for name, urls in targets.items():
+        base = urls[0].rstrip("/")
+        print(f"== {name}: {base}/robots.txt")
+        try:
+            r = requests.get(base + "/robots.txt", headers=HEADERS, timeout=30)
+            print("статус", r.status_code, "размер", len(r.text))
+            lines = [x for x in r.text.splitlines() if x.strip()]
+            print("\n".join(lines[:60]))
+            if len(lines) > 60:
+                print(f"... още {len(lines) - 60} реда")
+            if r.status_code < 400:
+                rp = RobotFileParser()
+                rp.parse(r.text.splitlines())
+                for u in urls:
+                    print(f"   позволено за нас: {rp.can_fetch(HEADERS['User-Agent'], u)} (всички роботи: {rp.can_fetch('*', u)}) {u}")
+        except Exception as e:
+            print("грешка:", e)
+        print()
+
+
 def eop_probe():
     """Само разузнаване: показва как изглеждат отворените данни на ЕОП (без разход на кредити)."""
     from datetime import date as _d
@@ -947,5 +974,7 @@ if __name__ == "__main__":
         _sites = json.load(f)
     if "--eop-probe" in sys.argv:
         eop_probe()
+    elif "--robots" in sys.argv:
+        robots_probe()
     else:
         run_test(_sites) if "--test" in sys.argv else run(_sites, force_jobs="--jobs" in sys.argv)
