@@ -100,6 +100,10 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
 .td .clr{border:0;background:none;color:var(--mu);font-size:12px;margin-top:6px;cursor:pointer;text-decoration:underline;padding:0}
 [hidden]{display:none!important}
 @media(max-width:900px){.app{flex-direction:column}.side{width:auto;padding:18px}.nav{flex-direction:row;flex-wrap:wrap}.main{padding:20px 16px}.hero{padding:24px}.hero h1{font-size:30px}}
+.jb{display:grid;grid-template-columns:minmax(180px,2fr) minmax(150px,1.5fr) 130px 120px auto;gap:6px 16px;align-items:center;border-top:1px solid var(--line);padding:12px 0}
+.jb.hd{font-size:13px;color:var(--mu);border-top:0;padding:0 0 6px}.jb b{font-weight:600}.jb small{color:var(--mu)}
+.jb a.btn{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);color:#1d4ed8;text-decoration:none;font-size:14px;background:#fff}
+@media(max-width:900px){.jb{grid-template-columns:1fr auto}.jb.hd{display:none}}
 </style>
 </head>
 <body>
@@ -143,6 +147,13 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;margin:0}
    <div class="pp"><img src="iva.jpg" alt="Ива">Ива</div>
   </div></section>
 </div>
+
+<section id="v-jobs" class="card page" hidden>
+ <h1>Работни места</h1>
+ <p class="note" id="jnote">Свободни работни места в област Хасково от последната седмица.</p>
+ <div class="ctl"><input type="search" id="jq" placeholder="Търсене..." aria-label="Търсене"><select id="jt" aria-label="Населено място"><option value="">Всички места</option></select><select id="jk" aria-label="Кой предлага"><option value="">Всички</option></select></div>
+ <div id="jobs"></div>
+</section>
 
 <section id="v-topics" class="card page" hidden>
  <h1>Журналистически теми</h1>
@@ -188,7 +199,8 @@ function skey(n){return (n.published||n.found.slice(0,10))+n.found}
 function sofia(d,o){return new Intl.DateTimeFormat('bg-BG',Object.assign({timeZone:'Europe/Sofia'},o)).format(d)}
 function sday(d){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Sofia'}).format(d)}
 
-var views=[['dash','Табло','M3 11l9-8 9 8M5 10v10h14V10'],['src','Институции / източници','M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6'],['cal','Календар','M4 6h16v14H4zM4 10h16M8 3v4M16 3v4'],['topics','Журналистически теми','M12 3l2.8 6 6.2.7-4.7 4.3 1.4 6.5L12 17.2 6.3 20.5l1.4-6.5L3 9.7 9.2 9z']];
+var jobsData=null;
+var views=[['dash','Табло','M3 11l9-8 9 8M5 10v10h14V10'],['src','Институции / източници','M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6'],['cal','Календар','M4 6h16v14H4zM4 10h16M8 3v4M16 3v4'],['jobs','Работни места','M4 7h16v12H4zM9 7V4h6v3M4 13h16'],['topics','Журналистически теми','M12 3l2.8 6 6.2.7-4.7 4.3 1.4 6.5L12 17.2 6.3 20.5l1.4-6.5L3 9.7 9.2 9z']];
 function show(v){views.forEach(function(x){$('v-'+x[0]).hidden=x[0]!==v});
  Array.from($('nav').children).forEach(function(b,i){b.className=views[i][0]===v?'on':''});window.scrollTo(0,0)}
 function buildNav(){views.forEach(function(x){
@@ -232,6 +244,27 @@ function renderTopics(){
  $('mini').replaceChildren.apply($('mini'),arr.length?arr.slice(0,6).map(function(n){return h('div',{className:'mini'},[h('small',{textContent:n.site+' · '+ldate(n)}),h('a',{href:safe(n.url),target:'_blank',rel:'noopener',textContent:n.title})])}):[h('div',{className:'mini empty',textContent:'Още няма отбелязани.'})]);
  $('topics').replaceChildren.apply($('topics'),arr.length?arr.map(function(n){return card(n,true)}):[h('div',{className:'empty',textContent:'Още няма отбелязани публикации. Натиснете „Интересна тема“ на публикация от таблото.'})])}
 
+function jobRows(){
+ var rows=[];
+ ((jobsData&&jobsData.items)||[]).forEach(function(j){rows.push({position:j.position,employer:j.employer,kind:j.kind,town:j.town,days:j.days,url:jobsData.url,label:'Източник: '+jobsData.source})});
+ var today=Date.parse(sday(new Date()));
+ news.filter(function(n){return n.tag==='работа'}).forEach(function(n){
+  var d=Math.max(0,Math.round((today-Date.parse(n.published||n.found.slice(0,10)))/864e5)),host='';
+  try{host=new URL(n.url).hostname.replace(/^www\./,'')}catch(e){}
+  rows.push({position:n.position||n.title,employer:n.site,kind:'Институция',town:n.site.split(' ').pop(),days:d,url:n.url,label:'Източник: '+(host||n.site)})});
+ return rows.sort(function(a,b){return a.days-b.days})}
+function renderJobs(){
+ var f=$('jq').value.trim().toLowerCase(),t=$('jt').value,k=$('jk').value;
+ var all=jobRows();$('n-jobs').textContent=all.length||'';
+ var rows=all.filter(function(j){return(!t||j.town==t)&&(!k||j.kind==k)&&(!f||(j.position+' '+j.employer+' '+j.town).toLowerCase().includes(f))});
+ $('jnote').textContent='Свободни работни места в област Хасково от последната седмица: '+all.length+'.'+(jobsData&&jobsData.updated?' Обявите от alo.bg са обновени '+ldate({published:jobsData.updated.slice(0,10)})+'.':'')+' Бутонът води към страницата, където е публикувана обявата.';
+ var head=h('div',{className:'jb hd'},[h('span',{textContent:'Длъжност'}),h('span',{textContent:'Предлага'}),h('span',{textContent:'Населено място'}),h('span',{textContent:'Публикувана'}),h('span',{textContent:''})]);
+ var body=rows.map(function(j){var d=j.days;
+  return h('div',{className:'jb'},[h('b',{textContent:j.position}),h('span',{textContent:j.employer}),h('span',{textContent:j.town||'–'}),
+   h('small',{textContent:d===0?'днес':d===1?'вчера':'преди '+d+' дни'}),
+   h('a',{className:'btn',href:safe(j.url),target:'_blank',rel:'noopener',textContent:j.label})])});
+ $('jobs').replaceChildren.apply($('jobs'),rows.length?[head].concat(body):[h('div',{className:'empty',textContent:'Още няма обяви. Прегледът на alo.bg се прави в понеделник след 14:00; конкурсите на институциите се добавят при всяко обхождане.'})])}
+function fillJobFilters(){var r=jobRows();$('jt').replaceChildren(h('option',{value:'',textContent:'Всички места'}));$('jk').replaceChildren(h('option',{value:'',textContent:'Всички'}));fill('jt',r.map(function(j){return j.town}));fill('jk',r.map(function(j){return j.kind}))}
 function renderSources(){
  $('n-src').textContent=sites.length||'';
  $('srcs').replaceChildren.apply($('srcs'),sites.length?sites.map(function(s){var us=s.urls||[s.url];return h('div',{className:'src'},[h('b',{textContent:s.name})].concat(us.map(function(u){return h('a',{href:safe(u),target:'_blank',rel:'noopener',textContent:decodeURI(u)})})))}):[h('div',{className:'empty',textContent:'Списъкът не се зареди.'})])}
@@ -384,10 +417,11 @@ if(dedupeTasks())saveTasks(true);
 buildNav();show('dash');renderTodo();SYNC.run(false);
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')SYNC.run(false)});
 setInterval(function(){if(document.visibilityState==='visible')SYNC.run(false)},120000);
-Promise.all([getJSON('news.json').catch(function(){return[]}),getJSON('meta.json').catch(function(){return null}),getJSON('sites.json').catch(function(){return[]})]).then(function(r){
+Promise.all([getJSON('news.json').catch(function(){return[]}),getJSON('meta.json').catch(function(){return null}),getJSON('sites.json').catch(function(){return[]}),getJSON('jobs.json').catch(function(){return null})]).then(function(r){
  var lim=Date.now()-7*864e5;
  news=r[0].filter(function(n){return !(Date.parse(n.published||n.found)<lim)}).sort(function(a,b){return skey(b)<skey(a)?-1:1});
- meta=r[1];sites=r[2];
+ meta=r[1];sites=r[2];jobsData=r[3];
+ fillJobFilters();['jq','jt','jk'].forEach(function(i){$(i).oninput=renderJobs});renderJobs();
  fill('fs',news.map(function(n){return n.site}));fill('ft',news.map(function(n){return n.tag}));fill('fp',news.map(function(n){return n.topic}));
  ['q','fs','ft','fp'].forEach(function(i){$(i).oninput=function(){expanded=false;renderFeed()}});
  renderMeta();renderSources();renderAll();
