@@ -679,6 +679,9 @@ def job_fields(parts, title, txt, publisher):
     if not employer:
         m = re.search(r"ДБТ\s*-\s*([^\]\n]+?)\s*\]", txt)
         employer = ("Бюро по труда " + m.group(1).strip()) if m else publisher
+    position = re.sub(r"^[\s:–-]+", "", position).strip()
+    if employer.casefold().startswith("частн"):
+        employer = "Частно лице"
     return position[:120], employer[:90]
 
 
