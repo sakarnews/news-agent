@@ -716,6 +716,8 @@ def jobs_cards(html_text, base):
         pub = ("Бюро по труда" if "бюро по труда" in txt.casefold()
                else "Частно лице" if "частно лице" in txt.casefold() else "Фирма")
         position, employer = job_fields(parts, title, txt, pub)
+        if employer == "Частно лице":
+            pub = "Частно лице"
         cards.append({"id": jid, "title": title, "position": position, "employer": employer,
                       "days": rel_days(dm.group(1)) if dm else None, "publisher": pub,
                       "town": town_name, "text": txt[:350], "parts": parts[:14]})
