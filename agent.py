@@ -669,12 +669,13 @@ def jobs_cards(html_text, base):
             best = node
         txt = re.sub(r"\s+", " ", best.get_text(" ", strip=True))
         dm = JOB_DATE.search(txt)
-        town = re.search(r"обява за работа в ([^,]+?)(?:,|\s+(?:област|обл\.)|\s{2,}|$)", txt, re.I)
+        town = re.search(r"обява за работа в (.{1,80})", txt, re.I)
+        town_name = re.split(r",|\s+(?:Длъжност|област|обл\.|Бюро|Фирма|Частно|Агенция|Публикувано)\b", town.group(1))[0].strip()[:30] if town else ""
         pub = ("Бюро по труда" if "бюро по труда" in txt.casefold()
                else "Частно лице" if "частно лице" in txt.casefold() else "Фирма")
         cards.append({"id": jid, "title": re.sub(r"\s+", " ", a.get_text(" ", strip=True)) or txt[:80],
                       "days": rel_days(dm.group(1)) if dm else None, "publisher": pub,
-                      "town": town.group(1).strip() if town else "", "text": txt[:350]})
+                      "town": town_name, "text": txt[:350]})
     return cards
 
 
