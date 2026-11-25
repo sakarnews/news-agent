@@ -872,6 +872,9 @@ def run(sites, force_jobs=False):
                     continue
                 res = analyze(client, name, item["title"], art["text"], site.get("rule", ""))
                 seen.append(item["url"])
+                if not res.get("relevant", True) and site.get("trust_list"):
+                    # списъкът на сайта е рубрика с обяви: приемаме записа, дори страницата да е само със заглавие
+                    res = {**res, "relevant": True, "tag": "обява", "summary": item["title"], "events": []}
                 if not res.get("relevant", True) or is_excluded(site, res.get("summary")):
                     skip["нерелевантни"] += 1
                     continue
