@@ -850,8 +850,14 @@ def run(sites, force_jobs=False):
         print(f"[{name}] намерени {len(items)}, за обработка: {len(batch)}")
         skip = {"без дата": 0, "стари": 0, "ключови думи": 0, "изключени": 0, "нерелевантни": 0}
         old_examples = []
+
+        def why(item, pub, what):
+            if site.get("debug"):
+                print(f"[{name}]   • {item['url'][-48:]} | дата: {pub} | {what} | {item['title'][:60]}")
+
         for item in reversed(batch):
             if item["url"] in have:
+                why(item, None, "вече е на таблото")
                 continue
             try:
                 art = fetch_article(item["url"], site.get("date_from_text", False))
@@ -859,16 +865,19 @@ def run(sites, force_jobs=False):
                 if (pub and age_days(pub) > MAX_AGE_DAYS) or (not pub and first):
                     seen.append(item["url"])  # по-старо от 2 седмици или без дата при първо обхождане
                     skip["стари" if pub else "без дата"] += 1
+                    why(item, pub, "пропуснато: " + ("старо" if pub else "без дата"))
                     if pub and len(old_examples) < 3:
                         old_examples.append(f"{pub} {item['url']}")
                     continue
                 if is_excluded(site, item["title"], art["text"][:1500]):
                     seen.append(item["url"])  # друга област или тема, която не ни интересува
                     skip["изключени"] += 1
+                    why(item, pub, "пропуснато: изключено")
                     continue
                 if site.get("keywords") and not kw_match(site["keywords"], item["title"], art["text"]):
                     seen.append(item["url"])  # не съдържа нужните ключови думи
                     skip["ключови думи"] += 1
+                    why(item, pub, "пропуснато: ключови думи")
                     continue
                 res = analyze(client, name, item["title"], art["text"], site.get("rule", ""))
                 seen.append(item["url"])
@@ -877,6 +886,7 @@ def run(sites, force_jobs=False):
                     res = {**res, "relevant": True, "tag": "обява", "summary": item["title"], "events": []}
                 if not res.get("relevant", True) or is_excluded(site, res.get("summary")):
                     skip["нерелевантни"] += 1
+                    why(item, pub, "пропуснато: нерелевантно")
                     continue
                 rec = {"site": name, "title": item["title"], "url": item["url"],
                        "tag": res["tag"], "summary": res["summary"] or item["title"],
@@ -888,6 +898,7 @@ def run(sites, force_jobs=False):
                 news.append(rec)
                 stats["new"] += 1
                 have.add(rec["url"])
+                why(item, pub, "ДОБАВЕНО")
                 if rec["urgent"] and not first and is_recent(rec["published"]):
                     telegram(rec)
             except Exception as e:
