@@ -252,7 +252,7 @@ def _find_items(site):
                 print(f"[{site['name']}] раздел {u}: {e}")
         return out
     for u in site.get("urls") or [site["url"]]:
-        for it in page_items(u, site.get("rss"), follow=True):
+        for it in page_items(u, site.get("rss"), follow=True, feed=not site.get("no_feed")):
             if it["url"] not in seen:
                 seen.add(it["url"])
                 out.append(it)
