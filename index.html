@@ -393,7 +393,7 @@ Promise.all([getJSON('news.json').catch(function(){return[]}),getJSON('meta.json
  news=r[0].filter(function(n){return !(Date.parse(n.published||n.found)<lim)}).sort(function(a,b){return skey(b)<skey(a)?-1:1});
  meta=r[1];sites=r[2];
 
- fill('fs',news.map(function(n){return n.site}));fill('ft',news.map(function(n){return n.tag}));fill('fp',news.map(function(n){return n.topic}));
+ fill('fs',news.map(function(n){return n.site}).concat(sites.map(function(s){return s.name})));fill('ft',news.map(function(n){return n.tag}));fill('fp',news.map(function(n){return n.topic}));
  ['q','fs','ft','fp'].forEach(function(i){$(i).oninput=function(){expanded=false;renderFeed()}});
  renderMeta();renderSources();renderAll();
 });
