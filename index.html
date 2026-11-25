@@ -248,7 +248,7 @@ function renderMeta(){
  day=sday(d)===today?'Днес':sday(d)===yest?'Вчера':sofia(d,{day:'2-digit',month:'2-digit'});
  $('c-when').textContent=day+', '+sofia(d,{hour:'2-digit',minute:'2-digit',hour12:false})+' ч.';
  var hr=parseInt(sofia(now,{hour:'2-digit',hour12:false}),10);
- var next=hr<10?'днес в 10:00':hr<18?'днес в 18:00':'утре в 10:00';
+ var next=hr<11?'днес в 11:00':hr<18?'днес в 18:00':'утре в 11:00';
  $('c-sub').textContent='Намерени '+meta.new+' нови. Следва '+next+'.';
  $('t-src').textContent=meta.sources_ok+' от '+meta.sources_total;
 }
