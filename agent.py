@@ -4,7 +4,7 @@
   python agent.py          нормална работа
   python agent.py --test   проверка на сайтовете, без запис
 """
-import html, io, json, os, re, sys
+import html, io, json, os, re, sys, time
 from datetime import date, datetime, timedelta, timezone
 from urllib.parse import quote, urljoin, urldefrag, urlparse
 
@@ -983,7 +983,11 @@ def run(sites, force_jobs=False):
             if site.get("debug"):
                 print(f"[{name}]   • {item['url'][-48:]} | дата: {pub} | {what} | {item['title'][:60]}")
 
+        t0 = time.monotonic()
         for item in reversed(batch):
+            if time.monotonic() - t0 > site.get("budget", 300):  # един бавен сайт не бива да блокира цялото обхождане
+                print(f"[{name}] спряно след {site.get('budget', 300)} сек. (бавен сайт); останалото остава за следващото обхождане")
+                break
             if item["url"] in have:
                 why(item, None, "вече е на таблото")
                 continue
