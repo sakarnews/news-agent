@@ -626,6 +626,11 @@ def eop_tenders_run(site, news, have):
     today = datetime.now(timezone.utc).date()
     added = scanned = 0
     seen_tenders = set()
+
+    def why(r, what):
+        if site.get("debug"):
+            print(f"[{site['name']}]   • {r.get('buyerName')} | поръчка {r.get('tenderId')} | {str(r.get('publicationDate'))[:10]} | {r.get('estimatedValue')} {r.get('currency')} | {r.get('noticeType')} | {what}")
+
     for back in range(0, MAX_AGE_DAYS + 1):
         day = (today - timedelta(days=back)).isoformat()
         try:
@@ -646,9 +651,11 @@ def eop_tenders_run(site, news, have):
                     continue
                 ntype = str(r.get("noticeType") or "").casefold()
                 if r.get("isCancelled") == "Да" or "възложена" in ntype or "изменение" in ntype:
+                    why(r, "пропуснато: анулирана/възложена/изменение")
                     continue
                 tid = r.get("tenderId") or r.get("noticeId")
                 if not tid or tid in seen_tenders:
+                    why(r, "пропуснато: повторно обявление за същата поръчка")
                     continue
                 seen_tenders.add(tid)
                 try:
@@ -658,12 +665,15 @@ def eop_tenders_run(site, news, have):
                 except ValueError:
                     val = None
                 if val is not None and val < lo:
+                    why(r, "пропуснато: под прага")
                     continue
                 url = f"https://app.eop.bg/today/{tid}#poruchka"
                 if url in have:
+                    why(r, "вече е на таблото")
                     continue
                 pub = str(r.get("publicationDate") or "")[:10] or day
                 if age_days(pub) > MAX_AGE_DAYS:
+                    why(r, "пропуснато: старо")
                     continue
                 subject = re.sub(r"\s+", " ", str(r.get("subject") or r.get("lotTenderName") or "")).strip()
                 money = f"{val:,.2f}".replace(",", " ").replace(".", ",") + " €" if val is not None else "не е посочена"
@@ -681,6 +691,7 @@ def eop_tenders_run(site, news, have):
                 news.append(rec)
                 have.add(url)
                 added += 1
+                why(r, "ДОБАВЕНО")
     print(f"[{site['name']}] прегледани {scanned} записа, нови поръчки на общините: {added}")
     return added
 
