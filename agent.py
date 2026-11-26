@@ -864,8 +864,8 @@ def run(sites, force_jobs=False):
                 continue
             try:
                 art = fetch_article(item["url"], site.get("date_from_text", False))
-                pub = art["label"] or item.get("date") or art["date"]  # дата на публикуване: надпис > списък > метаданни
-                if (pub and age_days(pub) > MAX_AGE_DAYS) or (not pub and first):
+                pub = art["label"] or item.get("date") or (None if site.get("ignore_meta") else art["date"])  # надпис > списък > метаданни
+                if (pub and age_days(pub) > MAX_AGE_DAYS) or (not pub and (first or site.get("ignore_meta"))):
                     seen.append(item["url"])  # по-старо от 2 седмици или без дата при първо обхождане
                     skip["стари" if pub else "без дата"] += 1
                     why(item, pub, "пропуснато: " + ("старо" if pub else "без дата"))

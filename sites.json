@@ -78,7 +78,9 @@
   ],
   "no_feed": true,
   "date_from_text": true,
-  "debug": true
+  "debug": true,
+  "ignore_meta": true,
+  "rev": "2026-11-26-1"
  },
  {
   "name": "Окръжен съд Хасково",
