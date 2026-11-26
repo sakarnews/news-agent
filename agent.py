@@ -276,15 +276,25 @@ def fetch_article(url, text_date=False, use_meta=True):
         if "html" not in ctype:
             return empty
         soup = BeautifulSoup(r.content, "html.parser")
-        label = labeled_date(re.sub(r"\s+", " ", soup.get_text(" ", strip=True)))
+        full = re.sub(r"\s+", " ", soup.get_text(" ", strip=True))
+        label = labeled_date(full) if use_meta else None
         pub = meta_date(soup) if use_meta else None
+        ctx = ""
+        if not use_meta:  # строг режим: надпис с дата само в основното съдържание, не в странични списъци
+            for t in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
+                t.decompose()
+            node0 = soup.find("article") or soup.find("main") or soup.body or soup
+            body = re.sub(r"\s+", " ", node0.get_text(" ", strip=True))
+            label = labeled_date(body)
+            m = re.search(r"(Дата\s+на\s+публикуване|Публикувано\s+на|Публикувана\s+на)", full, re.I)
+            ctx = full[max(0, m.start() - 80):m.end() + 60] if m else ""
         for t in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
             t.decompose()
         node = soup.find("article") or soup.find("main") or soup.body or soup
         text = re.sub(r"\s+", " ", node.get_text(" ", strip=True))[:3500]
         if not pub and text_date:  # сайтове, които пишат датата в началото на материала
             pub = parse_date(text[:600])
-        return {"text": text, "date": pub, "label": label}
+        return {"text": text, "date": pub, "label": label, "ctx": ctx}
     except Exception:
         return empty
 
@@ -870,7 +880,7 @@ def run(sites, force_jobs=False):
                 pub = art["label"] or lst or art["date"]  # дата на публикуване: надпис > списък > метаданни/текст
                 src = "надпис" if art["label"] else "списък" if lst else "страница" if art["date"] else "—"
                 if site.get("debug") and pub:
-                    print(f"[{name}]   (дата от: {src})")
+                    print(f"[{name}]   (дата от: {src}) контекст: {art.get('ctx', '')}")
                 if (pub and age_days(pub) > MAX_AGE_DAYS) or (not pub and (first or site.get("ignore_meta"))):
                     seen.append(item["url"])  # по-старо от 2 седмици или без дата при първо обхождане
                     skip["стари" if pub else "без дата"] += 1
