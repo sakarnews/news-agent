@@ -280,12 +280,31 @@ def fetch_article(url, text_date=False, use_meta=True, title=""):
         label = labeled_date(full) if use_meta else None
         pub = meta_date(soup) if use_meta else None
         ctx = ""
+        anchor_label = None
+        if not use_meta:
+            path = urlparse(url).path.rstrip("/")
+            for a in soup.find_all("a", href=True):  # връзката към самата страница в блока „Последно“ и датата до нея
+                if path and urlparse(urljoin(url, a["href"])).path.rstrip("/") == path:
+                    atext = re.sub(r"\s+", " ", a.get_text(" ", strip=True))
+                    node, got = a, None
+                    for _ in range(3):
+                        node = node.parent
+                        if node is None:
+                            break
+                        t = re.sub(r"\s+", " ", node.get_text(" ", strip=True))
+                        if len(t) <= 400 and atext and atext in t:
+                            got = labeled_date(t[t.index(atext) + len(atext):][:120])
+                            if got:
+                                break
+                    if got:
+                        anchor_label = got
+                        break
         if not use_meta:  # строг режим: надпис с дата само в основното съдържание, не в странични списъци
             for t in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
                 t.decompose()
             node0 = soup.find("article") or soup.find("main") or soup.body or soup
             body = re.sub(r"\s+", " ", node0.get_text(" ", strip=True))
-            label = labeled_date(body)
+            label = anchor_label or labeled_date(body)
             key = re.sub(r"\s+", " ", title or "").strip()[:40]
             if key and key in full:  # датата, изписана до заглавието на самата страница в блока „Последно“
                 for mm in re.finditer(re.escape(key), full):
