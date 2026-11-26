@@ -78,7 +78,6 @@
   ],
   "no_feed": true,
   "date_from_text": true,
-  "debug": true,
   "ignore_meta": true,
   "rev": "2026-11-26-4",
   "ignore_list": true
@@ -110,7 +109,6 @@
   },
   "trust_list": true,
   "no_feed": true,
-  "debug": true,
   "rule": "Само публични продажби на имоти или вещи в Хасковска област."
  },
  {
@@ -125,7 +123,6 @@
    "/properties/"
   ],
   "no_feed": true,
-  "debug": true,
   "trust_list": true
  },
  {
@@ -140,7 +137,6 @@
   "rev": "2026-11-25-5",
   "url": "https://topolovgrad.bg/",
   "trust_list": true,
-  "debug": true,
   "no_feed": true
  },
  {
