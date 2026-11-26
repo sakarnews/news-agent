@@ -224,7 +224,7 @@ function card(n,inTopics){
 function renderFeed(){
  var q=$('q').value.toLowerCase(),s=$('fs').value,t=$('ft').value,p=$('fp').value;
  var rows=news.filter(function(n){return(!s||n.site==s)&&(!t||n.tag==t)&&(!p||n.topic==p)&&(!q||(n.title+' '+n.summary+' '+n.site).toLowerCase().includes(q))});
- var u=news.filter(function(n){return n.urgent&&Date.now()-Date.parse(n.published||n.found)<3*864e5}).slice(0,5);
+ var u=news.filter(function(n){return n.urgent&&!/информационен бюлетин/i.test(n.title||'')&&Date.now()-Date.parse(n.published||n.found)<3*864e5}).slice(0,5);
  $('urg').replaceChildren.apply($('urg'),u.length?[h('div',{className:'urg'},[h('b',{textContent:'Спешно: '})].concat(u.map(function(n,i){return h('span',{},[i?' · ':'',h('a',{href:safe(n.url),target:'_blank',rel:'noopener',textContent:n.site+': '+n.title})])})))]:[]);
  var shown=expanded?rows.slice(0,300):rows.slice(0,LIMIT),kids=shown.map(function(n){return card(n,false)});
  if(rows.length>LIMIT){var mb=h('button',{type:'button',className:'more',textContent:expanded?'Покажи по-малко':'Покажи още ('+(Math.min(rows.length,300)-LIMIT)+')'});mb.onclick=function(){expanded=!expanded;renderFeed()};kids.push(mb)}
