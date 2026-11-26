@@ -982,5 +982,36 @@
   "position": "",
   "events": [],
   "found": "2026-11-26T09:51:25+00:00"
+ },
+ {
+  "site": "Областна администрация Хасково",
+  "title": "Представиха проекта за изграждане на завод за барут край село Бодрово пред местните институции",
+  "url": "https://www.hs.government.bg/page/3707-predstaviha-proekta-za-izgrazdane-na-zavod-za-barut-kraj-selo-bodrovo-pred-mestnite-institucii",
+  "tag": "новина",
+  "summary": "В Областна администрация Хасково се проведе работна среща с местните институции за проекта на „Ви Ти Ай Си Интернешънъл“ ЕООД за завод за барут край село Бодрово, община Димитровград, с прогнозна стойност около 250 млн. евро и над 110 нови работни места. Institutions discussed security, safety, and environmental requirements, and the investor was asked to inform the public.",
+  "topic": "инвестиции",
+  "urgent": false,
+  "published": "2026-11-25",
+  "position": "",
+  "events": [],
+  "found": "2026-11-26T10:20:42+00:00"
+ },
+ {
+  "site": "Община Димитровград",
+  "title": "161 изявени деца и младежи получиха стипендии и финансови стимули от Община Димитровград връчени от кмета Иво Димов",
+  "url": "https://www.dimitrovgrad.bg/bg/novini/161-izyaveni-detsa-i-mladezhi-poluchiha-stipendii-i-finansovi-stimuli-ot-obshtina-dimitrovgrad-vracheni-ot-kmeta-ivo-dimov",
+  "tag": "новина",
+  "summary": "Кметът Иво Димов връчи стипендии и еднократни финансови стимули на 161 изявени деца и младежи на обща стойност 22 523 евро. Трима от отличените получиха стипендия „Димитровградско дарование“ от 650 евро за постижения по математика.",
+  "topic": "стипендии",
+  "urgent": false,
+  "published": "2026-11-26",
+  "position": "",
+  "events": [
+   {
+    "date": "2026-11-28",
+    "what": "Светване на най-голямото живо Коледно дърво в Европа с участието на Дядо Коледа в Димитровград"
+   }
+  ],
+  "found": "2026-11-26T10:22:41+00:00"
  }
 ]
