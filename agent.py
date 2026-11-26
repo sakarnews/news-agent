@@ -10,6 +10,11 @@ from urllib.parse import quote, urljoin, urldefrag, urlparse
 
 import feedparser
 import requests
+
+try:
+    sys.stdout.reconfigure(line_buffering=True)  # редовете от лога се виждат веднага в GitHub
+except Exception:
+    pass
 from bs4 import BeautifulSoup
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -396,6 +401,12 @@ def is_excluded(site, *texts):
     words = (site or {}).get("exclude") or []
     hay = re.sub(r"\s+", " ", " ".join(t or "" for t in texts)).casefold()
     return any(w.casefold() in hay for w in words)
+
+
+def not_urgent(site, title):
+    """Рутинни материали (напр. седмичен информационен бюлетин) никога не са „Спешно“: фраза от no_urgent_titles в заглавието."""
+    t = (title or "").casefold()
+    return any(p.casefold() in t for p in (site or {}).get("no_urgent_titles", []))
 
 
 def kw_match(keywords, *texts):
@@ -897,6 +908,9 @@ def run(sites, force_jobs=False):
     if len(news) != before:
         print(f"Премахнати вече записани публикации по списъка за изключване: {before - len(news)}")
     news = [n for n in news if n.get("tag") != "работни места"]  # старият обобщен запис вече не се ползва
+    for n in news:
+        if n.get("urgent") and not_urgent(by_name.get(n.get("site")), n.get("title")):
+            n["urgent"] = False  # вече записани рутинни материали, обявени по погрешка за спешни
     do_main = True
     do_jobs = any(x.get("type") == "jobs" for x in sites) and (force_jobs or jobs_due(state))
     if os.environ.get("GITHUB_EVENT_NAME") == "schedule":
@@ -1009,7 +1023,7 @@ def run(sites, force_jobs=False):
                 rec = {"site": name, "title": item["title"], "url": item["url"],
                        "tag": res["tag"], "summary": res["summary"] or item["title"],
                        "topic": (res.get("topic") or "").strip().lower(),
-                       "urgent": bool(res.get("urgent")), "published": pub,
+                       "urgent": bool(res.get("urgent")) and not not_urgent(site, item["title"]), "published": pub,
                        "position": str(res.get("position") or "")[:90] if res.get("tag") == "работа" else "",
                        "events": clean_events(res.get("events")),
                        "found": datetime.now(timezone.utc).isoformat(timespec="seconds")}
