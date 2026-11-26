@@ -456,10 +456,10 @@ def run_test(sites):
                     print(f"✗ {s['name']} – {kind}: грешка ({e})")
             print()
             continue
-        if s.get("type") == "eop":
+        if s.get("type") in ("eop", "eop_tenders"):
             try:
                 day = (datetime.now(timezone.utc).date() - timedelta(days=1)).isoformat()
-                files = eop_day_files(day)
+                files = eop_day_files(day, "поръчки" if s["type"] == "eop_tenders" else "договори")
                 n = sum(len(eop_records(f)) for f in files)
                 print(f"{'✓' if files else '⚠'} {s['name']}: файлове за {day}: {len(files)}, записа: {n}\n")
             except Exception as e:
@@ -495,14 +495,15 @@ def eop_money(rec):
     return None
 
 
-def eop_day_files(day):
-    """Адресите на файловете с договори за дадена дата (или [])."""
+def eop_day_files(day, kind="договори"):
+    """Адресите на файловете с договори (или с обявените поръчки) за дадена дата (или [])."""
     url = EOP_BASE.format(day)
     r = requests.get(url, headers=HEADERS, timeout=40)
     if r.status_code != 200:
         return []
     keys = re.findall(r"<Key>([^<]+)</Key>", r.text)
-    return [url + quote(k) for k in keys if "договори" in k.casefold() and "анекс" not in k.casefold()]
+    return [url + quote(k) for k in keys if kind in k.casefold() and "анекс" not in k.casefold()
+            and (kind != "поръчки" or "договори" not in k.casefold())]
 
 
 def eop_records(url):
@@ -579,6 +580,73 @@ def eop_run(site, news, have):
                 have.add(url)
                 added += 1
     print(f"[{site['name']}] прегледани {scanned} записа, нови договори на общините: {added}, без посочена стойност: {noval}")
+    return added
+
+
+def eop_tenders_run(site, news, have):
+    """Обявени (нови) обществени поръчки на общините: когато се обявят, а не когато се сключи договор."""
+    munis = [m.casefold() for m in site.get("municipalities", [])]
+    lo = float(site.get("min_value", 0))
+    pat = re.compile(r"^\s*община\s+(" + "|".join(re.escape(m) for m in munis) + r")\b", re.I)
+    today = datetime.now(timezone.utc).date()
+    added = scanned = 0
+    seen_tenders = set()
+    for back in range(0, MAX_AGE_DAYS + 1):
+        day = (today - timedelta(days=back)).isoformat()
+        try:
+            files = eop_day_files(day, "поръчки")
+        except Exception as e:
+            print(f"[{site['name']}] {day}: {e}")
+            continue
+        for fu in files:
+            try:
+                recs = eop_records(fu)
+            except Exception as e:
+                print(f"[{site['name']}] файл {day}: {e}")
+                continue
+            scanned += len(recs)
+            for r in recs:
+                buyer = str(r.get("buyerName") or "")
+                if not pat.match(buyer):
+                    continue
+                ntype = str(r.get("noticeType") or "").casefold()
+                if r.get("isCancelled") == "Да" or "възложена" in ntype or "изменение" in ntype:
+                    continue
+                tid = r.get("tenderId") or r.get("noticeId")
+                if not tid or tid in seen_tenders:
+                    continue
+                seen_tenders.add(tid)
+                try:
+                    val = float(str(r.get("estimatedValue") or "").replace("\xa0", "").replace(" ", "").replace(",", "."))
+                    if str(r.get("currency", "EUR")).upper() == "BGN":
+                        val /= 1.95583
+                except ValueError:
+                    val = None
+                if val is not None and val < lo:
+                    continue
+                url = f"https://app.eop.bg/today/{tid}#poruchka"
+                if url in have:
+                    continue
+                pub = str(r.get("publicationDate") or "")[:10] or day
+                if age_days(pub) > MAX_AGE_DAYS:
+                    continue
+                subject = re.sub(r"\s+", " ", str(r.get("subject") or r.get("lotTenderName") or "")).strip()
+                money = f"{val:,.2f}".replace(",", " ").replace(".", ",") + " €" if val is not None else "не е посочена"
+                summ = f"{buyer.title()} обяви поръчка: {subject[:220]}. Прогнозна стойност: {money}."
+                if r.get("procedureType"):
+                    summ += f" Процедура: {r['procedureType']}."
+                events = []
+                dl = str(r.get("submissionDeadline") or "")[:10]
+                if re.match(r"\d{4}-\d{2}-\d{2}$", dl):
+                    summ += f" Краен срок за оферти: {dl[8:]}.{dl[5:7]}.{dl[:4]}."
+                    events = clean_events([{"date": dl, "what": "Краен срок за оферти: " + subject[:60]}])
+                rec = {"site": site["name"], "title": f"{buyer.title()}: {subject[:130]}", "url": url, "tag": "поръчка",
+                       "summary": summ, "topic": "обществени поръчки", "urgent": False, "published": pub,
+                       "events": events, "found": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+                news.append(rec)
+                have.add(url)
+                added += 1
+    print(f"[{site['name']}] прегледани {scanned} записа, нови поръчки на общините: {added}")
     return added
 
 
@@ -862,9 +930,9 @@ def run(sites, force_jobs=False):
             except Exception as e:
                 print(f"[{name}] грешка: {e}")
             continue
-        if site.get("type") == "eop":
+        if site.get("type") in ("eop", "eop_tenders"):
             try:
-                stats["new"] += eop_run(site, news, have)
+                stats["new"] += (eop_tenders_run if site["type"] == "eop_tenders" else eop_run)(site, news, have)
                 stats["ok"] += 1
             except Exception as e:
                 print(f"[{name}] грешка: {e}")
