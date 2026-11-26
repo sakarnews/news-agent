@@ -47,11 +47,14 @@ SYSTEM = """Ти си помощник на главен редактор на �
   Дата на публикуване или минала дата не е събитие. Ако няма такива, върни празен списък []."""
 
 
+SLOW = False  # бавни сайтове (slow:true в sites.json): по-дълго чакане
+
+
 def get(url):
     """Бавните сайтове получават втори опит и по-дълго време за отговор."""
     for attempt in (1, 2):
         try:
-            r = requests.get(url, headers=HEADERS, timeout=25 if attempt == 1 else 60)
+            r = requests.get(url, headers=HEADERS, timeout=(60 if attempt == 1 else 120) if SLOW else (25 if attempt == 1 else 60))
             r.raise_for_status()
             return r
         except (requests.Timeout, requests.ConnectionError):
@@ -937,6 +940,7 @@ def run(sites, force_jobs=False):
             except Exception as e:
                 print(f"[{name}] грешка: {e}")
             continue
+        globals()["SLOW"] = bool(site.get("slow"))
         try:
             items = find_items(site)
         except Exception as e:
@@ -1022,6 +1026,7 @@ def run(sites, force_jobs=False):
             for ex in old_examples:
                 print(f"[{name}]   пример за старо: {ex}")
         state[name] = seen[-MAX_SEEN:]
+    globals()["SLOW"] = False
     state["_v6"] = True
     save(SEEN, state)
     news = [n for n in news if age_days(n.get("published"), n.get("found")) <= MAX_AGE_DAYS]
