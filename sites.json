@@ -1,5 +1,20 @@
 [
  {
+  "name": "Община Хасково",
+  "url": "https://www.haskovo.bg/bg/",
+  "urls": [
+   "https://www.haskovo.bg/bg/novini",
+   "https://www.haskovo.bg/bg/obyavi-i-saobshteniya",
+   "https://www.haskovo.bg/bg/targove-i-kontsesii",
+   "https://www.haskovo.bg/bg/proekti-za-obshtestveno-obsazhdane",
+   "https://www.haskovo.bg/bg/karieri",
+   "https://www.haskovo.bg/bg/pitaniya-ot-obshtinski-savetnitsi",
+   "https://www.haskovo.bg/bg/obyavi",
+   "https://www.haskovo.bg/bg/zasedaniya-na-obshtinski-savet"
+  ],
+  "debug": true
+ },
+ {
   "name": "Община Харманли",
   "url": "https://www.harmanli.bg/bg/",
   "urls": [

@@ -991,7 +991,7 @@ def robots_probe():
 
 
 def eop_probe():
-    """Само разузнаване: показва как изглеждат отворените данни на ЕОП (без разход на кредити)."""
+    """Само разузнаване: какви файлове има в отворените данни на ЕОП за последните дни и как изглеждат (без запис, без кредити)."""
     from datetime import date as _d
     base = "https://storage.eop.bg/open-data-{}/"
     for back in (1, 2, 3):
@@ -1000,30 +1000,33 @@ def eop_probe():
         print(f"== {url}")
         try:
             r = requests.get(url, headers=HEADERS, timeout=40)
-            print("статус", r.status_code, r.headers.get("content-type"), "размер", len(r.content))
-            print(r.text[:1500].replace("\n", " "))
-            files = re.findall(r"<Key>([^<]+)</Key>", r.text) or re.findall(r'href="([^"]+\.(?:json|zip|gz))"', r.text)
-            print("файлове:", len(files), files[:8])
-            for f in files[:1]:
-                fu = f if f.startswith("http") else url + f.lstrip("/")
-                fr = requests.get(fu, headers=HEADERS, timeout=90)
-                print("файл", fu, fr.status_code, len(fr.content))
-                body = fr.content
-                if fu.endswith(".gz"):
-                    import gzip
-                    body = gzip.decompress(body)
-                elif fu.endswith(".zip"):
-                    import zipfile
-                    z = zipfile.ZipFile(io.BytesIO(body))
-                    print("в архива:", z.namelist()[:5])
-                    body = z.read(z.namelist()[0])
+            print("статус", r.status_code, "размер", len(r.content))
+            keys = re.findall(r"<Key>([^<]+)</Key>", r.text)
+            print("файлове:", len(keys))
+            for k in keys[:60]:
+                print("  -", k)
+            if not keys:
+                print(r.text[:800].replace("\n", " "))
+                continue
+            shown = set()
+            for k in keys:  # по един пример от всеки вид файл (различен по името без датата/номера)
+                kind = re.sub(r"[\d\-_.]+", "", k)[:40]
+                if kind in shown or len(shown) >= 6:
+                    continue
+                shown.add(kind)
                 try:
+                    body = requests.get(url + quote(k), headers=HEADERS, timeout=120).content
+                    if k.endswith(".gz"):
+                        import gzip
+                        body = gzip.decompress(body)
                     data = json.loads(body)
-                    print("тип", type(data).__name__, "ключове", list(data)[:12] if isinstance(data, dict) else len(data))
-                    rel = (data.get("releases") or data.get("records") or [data])[0] if isinstance(data, dict) else data[0]
-                    print(json.dumps(rel, ensure_ascii=False)[:3500])
+                    if isinstance(data, dict):
+                        data = data.get("releases") or data.get("records") or data.get("data") or [data]
+                    print(f"--- {k}: записи {len(data)}")
+                    if data:
+                        print(json.dumps(data[0], ensure_ascii=False)[:1800])
                 except Exception as e:
-                    print("не е JSON:", e, body[:500])
+                    print(f"--- {k}: не може да се прочете: {e}")
             break
         except Exception as e:
             print("грешка:", e)
