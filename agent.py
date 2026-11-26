@@ -988,7 +988,7 @@ def run(sites, force_jobs=False):
             continue
         globals()["SLOW"] = bool(site.get("slow"))
         try:
-            items = call_limit(find_items, site.get("budget", 300), site)
+            items = call_limit(find_items, site.get("budget", 300), site) if site.get("slow") else find_items(site)
         except Exception as e:
             print(f"[{name}] грешка: {e}")
             continue
@@ -1024,7 +1024,9 @@ def run(sites, force_jobs=False):
                 why(item, None, "вече е на таблото")
                 continue
             try:
-                art = call_limit(fetch_article, 120, item["url"], site.get("date_from_text", False), not site.get("ignore_meta"), item["title"])
+                art = (call_limit(fetch_article, 120, item["url"], site.get("date_from_text", False), not site.get("ignore_meta"), item["title"])
+                       if site.get("slow") else
+                       fetch_article(item["url"], site.get("date_from_text", False), not site.get("ignore_meta"), item["title"]))
                 lst = None if site.get("ignore_list") else item.get("date")
                 pub = art["label"] or lst or art["date"]  # дата на публикуване: надпис > списък > метаданни/текст
                 src = "надпис" if art["label"] else "списък" if lst else "страница" if art["date"] else "—"
