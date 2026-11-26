@@ -79,9 +79,9 @@
   "no_feed": true,
   "date_from_text": true,
   "ignore_meta": true,
-  "rev": "2026-11-26-6",
-  "ignore_list": true,
-  "backfill": 200
+  "rev": "2026-11-26-7",
+  "backfill": 200,
+  "debug": true
  },
  {
   "name": "Окръжен съд Хасково",
