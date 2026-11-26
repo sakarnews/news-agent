@@ -262,7 +262,7 @@ def _find_items(site):
     return out
 
 
-def fetch_article(url, text_date=False, use_meta=True):
+def fetch_article(url, text_date=False, use_meta=True, title=""):
     """Връща текста на страницата и датата ѝ на публикуване (ако се намери)."""
     empty = {"text": "", "date": None, "label": None}
     try:
@@ -286,6 +286,13 @@ def fetch_article(url, text_date=False, use_meta=True):
             node0 = soup.find("article") or soup.find("main") or soup.body or soup
             body = re.sub(r"\s+", " ", node0.get_text(" ", strip=True))
             label = labeled_date(body)
+            key = re.sub(r"\s+", " ", title or "").strip()[:40]
+            if key and key in full:  # датата, изписана до заглавието на самата страница в блока „Последно“
+                for mm in re.finditer(re.escape(key), full):
+                    d = labeled_date(full[mm.end():mm.end() + 120])
+                    if d:
+                        label = d
+                        break
             m = re.search(r"(Дата\s+на\s+публикуване|Публикувано\s+на|Публикувана\s+на)", full, re.I)
             ctx = full[max(0, m.start() - 80):m.end() + 60] if m else ""
         for t in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
@@ -875,7 +882,7 @@ def run(sites, force_jobs=False):
                 why(item, None, "вече е на таблото")
                 continue
             try:
-                art = fetch_article(item["url"], site.get("date_from_text", False), not site.get("ignore_meta"))
+                art = fetch_article(item["url"], site.get("date_from_text", False), not site.get("ignore_meta"), item["title"])
                 lst = None if site.get("ignore_list") else item.get("date")
                 pub = art["label"] or lst or art["date"]  # дата на публикуване: надпис > списък > метаданни/текст
                 src = "надпис" if art["label"] else "списък" if lst else "страница" if art["date"] else "—"
