@@ -844,6 +844,8 @@ def run(sites, force_jobs=False):
         if reset:
             seen = []
             revs[name] = site["rev"]
+            news[:] = [n for n in news if n.get("site") != name]  # махаме грешно добавените записи на сайта
+            have = {n["url"] for n in news}
         first = backfill or name not in state or reset
         if first:
             batch = items[:site.get("backfill", BACKFILL)]
