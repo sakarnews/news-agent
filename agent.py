@@ -262,7 +262,7 @@ def _find_items(site):
     return out
 
 
-def fetch_article(url, text_date=False):
+def fetch_article(url, text_date=False, use_meta=True):
     """Връща текста на страницата и датата ѝ на публикуване (ако се намери)."""
     empty = {"text": "", "date": None, "label": None}
     try:
@@ -277,7 +277,7 @@ def fetch_article(url, text_date=False):
             return empty
         soup = BeautifulSoup(r.content, "html.parser")
         label = labeled_date(re.sub(r"\s+", " ", soup.get_text(" ", strip=True)))
-        pub = meta_date(soup)
+        pub = meta_date(soup) if use_meta else None
         for t in soup(["script", "style", "nav", "header", "footer", "aside", "form"]):
             t.decompose()
         node = soup.find("article") or soup.find("main") or soup.body or soup
@@ -865,8 +865,12 @@ def run(sites, force_jobs=False):
                 why(item, None, "вече е на таблото")
                 continue
             try:
-                art = fetch_article(item["url"], site.get("date_from_text", False))
-                pub = art["label"] or item.get("date") or (None if site.get("ignore_meta") else art["date"])  # надпис > списък > метаданни
+                art = fetch_article(item["url"], site.get("date_from_text", False), not site.get("ignore_meta"))
+                lst = None if site.get("ignore_list") else item.get("date")
+                pub = art["label"] or lst or art["date"]  # дата на публикуване: надпис > списък > метаданни/текст
+                src = "надпис" if art["label"] else "списък" if lst else "страница" if art["date"] else "—"
+                if site.get("debug") and pub:
+                    print(f"[{name}]   (дата от: {src})")
                 if (pub and age_days(pub) > MAX_AGE_DAYS) or (not pub and (first or site.get("ignore_meta"))):
                     seen.append(item["url"])  # по-старо от 2 седмици или без дата при първо обхождане
                     skip["стари" if pub else "без дата"] += 1

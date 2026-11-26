@@ -80,7 +80,8 @@
   "date_from_text": true,
   "debug": true,
   "ignore_meta": true,
-  "rev": "2026-11-26-2"
+  "rev": "2026-11-26-3",
+  "ignore_list": true
  },
  {
   "name": "Окръжен съд Хасково",
