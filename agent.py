@@ -255,6 +255,9 @@ def _find_items(site):
         for it in page_items(u, site.get("rss"), follow=True, feed=not site.get("no_feed")):
             if it["url"] not in seen:
                 seen.add(it["url"])
+                if site.get("labels", {}).get(u):  # страници само с дата и номер на дело: правим четливо заглавие
+                    m = re.search(r"\d{10,}", it["url"] + " " + it["title"])
+                    it["title"] = f"{site['labels'][u]}: публична продажба, изпълнително дело № {m.group(0) if m else ''}".strip()
                 out.append(it)
     return out
 

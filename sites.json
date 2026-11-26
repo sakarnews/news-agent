@@ -67,6 +67,20 @@
   "url": "https://www.svilengrad.bg/"
  },
  {
+  "name": "Областна администрация Хасково",
+  "url": "https://www.hs.government.bg/",
+  "urls": [
+   "https://www.hs.government.bg/",
+   "https://www.hs.government.bg/posts/37",
+   "https://www.hs.government.bg/posts/38",
+   "https://www.hs.government.bg/posts/46",
+   "https://www.hs.government.bg/posts/56"
+  ],
+  "no_feed": true,
+  "date_from_text": true,
+  "debug": true
+ },
+ {
   "name": "Окръжен съд Хасково",
   "url": "https://haskovo-os.justice.bg/bg/news1"
  },
@@ -74,6 +88,42 @@
   "name": "Окръжен съд: публични продажби",
   "url": "https://haskovo-os.justice.bg/bg/4477",
   "rule": "Само публични продажби на имоти или вещи, които се намират в Хасковска област (общините Хасково, Димитровград, Харманли, Свиленград, Любимец, Симеоновград, Минерални бани, Стамболово, Маджарово, Тополовград, Ивайловград). Продажби в други области не са подходящи."
+ },
+ {
+  "name": "Окръжен съд: публични продажби (ДСИ)",
+  "url": "https://haskovo-os.justice.bg/bg/12980",
+  "urls": [
+   "https://haskovo-os.justice.bg/bg/12980",
+   "https://haskovo-os.justice.bg/bg/12981",
+   "https://haskovo-os.justice.bg/bg/12982"
+  ],
+  "link_patterns": [
+   "/upload/"
+  ],
+  "labels": {
+   "https://haskovo-os.justice.bg/bg/12980": "ДСИ Димитровград",
+   "https://haskovo-os.justice.bg/bg/12981": "ДСИ Харманли",
+   "https://haskovo-os.justice.bg/bg/12982": "ДСИ Свиленград"
+  },
+  "trust_list": true,
+  "no_feed": true,
+  "debug": true,
+  "rule": "Само публични продажби на имоти или вещи в Хасковска област."
+ },
+ {
+  "name": "Публични продажби – ЧСИ (Окръжен съд Хасково)",
+  "url": "https://sales.bcpea.org/properties?court=24&perpage=12",
+  "urls": [
+   "https://sales.bcpea.org/properties?court=24&perpage=12",
+   "https://sales.bcpea.org/properties?perpage=12&court=24&p=2",
+   "https://sales.bcpea.org/properties?perpage=12&court=24&p=3"
+  ],
+  "link_patterns": [
+   "/properties/"
+  ],
+  "no_feed": true,
+  "debug": true,
+  "trust_list": true
  },
  {
   "name": "Община Тополовград",
