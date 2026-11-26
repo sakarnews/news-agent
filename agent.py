@@ -67,6 +67,27 @@ def get(url):
                 raise
 
 
+def call_limit(fn, seconds, *args):
+    """Изпълнява fn с твърд срок: ако сайт „увисне“ и праща данни по капчица, спираме да го чакаме."""
+    import threading
+    box = {}
+
+    def work():
+        try:
+            box["v"] = fn(*args)
+        except BaseException as e:  # noqa
+            box["e"] = e
+
+    t = threading.Thread(target=work, daemon=True)
+    t.start()
+    t.join(seconds)
+    if t.is_alive():
+        raise TimeoutError(f"няма отговор за {seconds} сек.")
+    if "e" in box:
+        raise box["e"]
+    return box.get("v")
+
+
 def host(url):
     return urlparse(url).netloc.lower().removeprefix("www.")
 
@@ -956,7 +977,7 @@ def run(sites, force_jobs=False):
             continue
         globals()["SLOW"] = bool(site.get("slow"))
         try:
-            items = find_items(site)
+            items = call_limit(find_items, site.get("budget", 300), site)
         except Exception as e:
             print(f"[{name}] грешка: {e}")
             continue
@@ -992,7 +1013,7 @@ def run(sites, force_jobs=False):
                 why(item, None, "вече е на таблото")
                 continue
             try:
-                art = fetch_article(item["url"], site.get("date_from_text", False), not site.get("ignore_meta"), item["title"])
+                art = call_limit(fetch_article, 120, item["url"], site.get("date_from_text", False), not site.get("ignore_meta"), item["title"])
                 lst = None if site.get("ignore_list") else item.get("date")
                 pub = art["label"] or lst or art["date"]  # дата на публикуване: надпис > списък > метаданни/текст
                 src = "надпис" if art["label"] else "списък" if lst else "страница" if art["date"] else "—"
