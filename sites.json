@@ -191,7 +191,17 @@
  {
   "name": "Община Маджарово",
   "url": "https://www.madzharovo.bg/new/main.php",
-  "slow": true
+  "urls": [
+   "https://www.madzharovo.bg/new/main.php",
+   "https://www.madzharovo.bg/new/main.php?module=news&nws_cat_id=9",
+   "https://www.madzharovo.bg/new/main.php?module=info&object=category&action=list&inf_cat_id=54",
+   "https://www.madzharovo.bg/new/main.php?module=documents&object=category&doc_cat_id=25",
+   "https://www.madzharovo.bg/new/main.php?module=news&nws_cat_id=3",
+   "https://www.madzharovo.bg/new/main.php?module=news&nws_cat_id=2",
+   "https://www.madzharovo.bg/new/main.php?module=news&nws_cat_id=4",
+   "https://www.madzharovo.bg/new/main.php?module=documents&object=category&doc_cat_id=7"
+  ],
+  "debug": true
  },
  {
   "name": "ЕОП – договори на общините",
