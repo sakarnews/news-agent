@@ -201,7 +201,8 @@
    "https://www.madzharovo.bg/new/main.php?module=news&nws_cat_id=4",
    "https://www.madzharovo.bg/new/main.php?module=documents&object=category&doc_cat_id=7"
   ],
-  "debug": true
+  "slow": true,
+  "budget": 120
  },
  {
   "name": "ЕОП – договори на общините",
