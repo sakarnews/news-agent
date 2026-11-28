@@ -389,7 +389,7 @@ buildNav();show('dash');renderTodo();SYNC.run(false);
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')SYNC.run(false)});
 setInterval(function(){if(document.visibilityState==='visible')SYNC.run(false)},120000);
 Promise.all([getJSON('news.json').catch(function(){return[]}),getJSON('meta.json').catch(function(){return null}),getJSON('sites.json').catch(function(){return[]})]).then(function(r){
- var lim=Date.now()-7*864e5;
+ var d0=new Date();d0.setHours(0,0,0,0);var lim=d0.getTime()-7*864e5;
  news=r[0].filter(function(n){return !(Date.parse(n.published||n.found)<lim)}).sort(function(a,b){return skey(b)<skey(a)?-1:1});
  meta=r[1];sites=r[2];
 
