@@ -2,7 +2,7 @@ name: news-watcher
 
 on:
   schedule:
-    # Всеки час (в :23) агентът проверява дали е дошло време за обхождане: слот 10:00 и слот 18:00
+    # Всеки час (в :23) агентът проверява дали е дошло време за обхождане: слот 11:00 и слот 18:00
     # български часове. Ако GitHub закъснее или пропусне пускане, следващият час наваксва.
     # Пусканията извън слот излизат веднага и не харчат кредити.
     - cron: "23 * * * *"
@@ -28,15 +28,34 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - name: Run agent
+        timeout-minutes: 25
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           ARGS: ${{ inputs.args }}
         run: python agent.py $ARGS
+      - name: Run slow sites
+        # Бавните сайтове (slow:true в sites.json) се обхождат отделно: ако не отговорят, това не пречи на останалите
+        if: ${{ inputs.args == '' }}
+        continue-on-error: true
+        timeout-minutes: 8
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python agent.py --slow
       - name: Save state
+        if: always()
         run: |
           git config user.name "news-bot"
           git config user.email "news-bot@users.noreply.github.com"
           git add -A
-          git diff --cached --quiet || (git commit -m "update state" && git push)
+          git diff --cached --quiet && exit 0
+          git commit -m "update state"
+          for i in 1 2 3 4; do
+            git pull --rebase -X theirs origin main && git push && exit 0
+            git rebase --abort 2>/dev/null || true
+            sleep 8
+          done
+          exit 1
