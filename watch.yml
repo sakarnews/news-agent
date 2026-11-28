@@ -28,13 +28,25 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - name: Run agent
+        timeout-minutes: 25
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           ARGS: ${{ inputs.args }}
         run: python agent.py $ARGS
+      - name: Run slow sites
+        # Бавните сайтове (slow:true в sites.json) се обхождат отделно: ако не отговорят, това не пречи на останалите
+        if: ${{ inputs.args == '' }}
+        continue-on-error: true
+        timeout-minutes: 8
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python agent.py --slow
       - name: Save state
+        if: always()
         run: |
           git config user.name "news-bot"
           git config user.email "news-bot@users.noreply.github.com"

@@ -930,7 +930,7 @@ def jobs_due(state):
     return now.weekday() == 0 and now.hour >= 14 and state.get("_jobs_week") != f"{iso[0]}-{iso[1]}"
 
 
-def run(sites, force_jobs=False):
+def run(sites, force_jobs=False, slow_only=False):
     import anthropic
     client = anthropic.Anthropic()
     state, news = load(SEEN, {}), load(NEWS, [])
@@ -943,16 +943,18 @@ def run(sites, force_jobs=False):
     for n in news:
         if n.get("urgent") and not_urgent(by_name.get(n.get("site")), n.get("title")):
             n["urgent"] = False  # вече записани рутинни материали, обявени по погрешка за спешни
+    sites = [x for x in sites if bool(x.get("slow")) == slow_only]  # бавните сайтове се обхождат отделно (--slow)
+    slot_key = "_slot_slow" if slow_only else "_slot"
     do_main = True
-    do_jobs = any(x.get("type") == "jobs" for x in sites) and (force_jobs or jobs_due(state))
+    do_jobs = (not slow_only) and any(x.get("type") == "jobs" for x in sites) and (force_jobs or jobs_due(state))
     if os.environ.get("GITHUB_EVENT_NAME") == "schedule":
         slot = due_slot()
-        do_main = bool(slot) and state.get("_slot") != slot
+        do_main = bool(slot) and state.get(slot_key) != slot
         if not do_main and not do_jobs:
             print("Не е време за обхождане (11:00 или 18:00) или вече е направено. Край.")
             return
         if do_main:
-            state["_slot"] = slot
+            state[slot_key] = slot
     backfill = not state.get("_v6")
     if backfill:
         news = []  # преизграждане с новия начин за определяне на датата
@@ -1083,9 +1085,16 @@ def run(sites, force_jobs=False):
     save(SEEN, state)
     news = [n for n in news if age_days(n.get("published"), n.get("found")) <= MAX_AGE_DAYS]
     save(NEWS, news[-MAX_NEWS:])
-    if do_main:
+    if do_main and not slow_only:
         save(META, {"last_run": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                     "sources_total": len(sites), "sources_ok": stats["ok"], "new": stats["new"]})
+    elif do_main and slow_only and sites:  # допълваме данните от основното обхождане с бавните сайтове
+        m = load(META, None)
+        if isinstance(m, dict):
+            m["sources_total"] = m.get("sources_total", 0) + len(sites)
+            m["sources_ok"] = m.get("sources_ok", 0) + stats["ok"]
+            m["new"] = m.get("new", 0) + stats["new"]
+            save(META, m)
 
 
 def robots_probe():
@@ -1165,4 +1174,4 @@ if __name__ == "__main__":
     elif "--robots" in sys.argv:
         robots_probe()
     else:
-        run_test(_sites) if "--test" in sys.argv else run(_sites, force_jobs="--jobs" in sys.argv)
+        run_test(_sites) if "--test" in sys.argv else run(_sites, force_jobs="--jobs" in sys.argv, slow_only="--slow" in sys.argv)
